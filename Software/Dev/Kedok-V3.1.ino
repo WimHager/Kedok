@@ -40,6 +40,8 @@ To Do:
  Added Auto adjust
  New Beep and Keypressed function
  23-5-2015 Added some text in Auto adjust
+ V3.1 26-6-2015
+ Gain is replaced by Curve for better understanding.
  */
 
 #include <LiquidCrystal.h>
@@ -53,7 +55,7 @@ int Melody[] = {
 int NoteDurations[] = { 
   4, 8, 8, 4, 4, 4, 4, 4 };
 
-const   char      Version[5]= "3.0";
+const   char      Version[5]= "3.1";
 const   byte      None=           0; 
 const   byte      Select=         1;
 const   byte      Left=           2; 
@@ -71,7 +73,7 @@ word    MinValue=         100;
 word    MaxValue=         800;
 word    LowTone=          100; 
 word    HighTone=         1750;
-int     Gain=             0;
+int     Curve=            0;
 word    UpdTime=          1000;
 byte    Display=          1; 
 byte    ResetAll=         0;
@@ -86,7 +88,7 @@ word    AudioTone;
 word    LowestReading;
 byte    KeyPressed;
 
-float fscale( float originalMin, float originalMax, float newBegin, float newEnd, float inputValue, float curve){
+float fscale( float originalMin, float originalMax, float newBegin, float newEnd, float inputValue, float Curve){
   float   OriginalRange=    0;
   float   NewRange=         0;
   float   zeroRefCurVal=    0;
@@ -94,10 +96,9 @@ float fscale( float originalMin, float originalMax, float newBegin, float newEnd
   float   rangedValue=      0;
   boolean invFlag=          0;
 
-  //if (curve > 10) curve= 10;
-  //if (curve < -10) curve= -10;
-  curve = (curve * -.1) ; 
-  curve = pow(10, curve);
+  Curve= 0-Curve; //Make Curve negative
+  Curve= (Curve * -.1) ; 
+  Curve= pow(10, Curve);
   if (inputValue < originalMin) inputValue= originalMin;
   if (inputValue > originalMax) inputValue = originalMax;
   OriginalRange = originalMax - originalMin;
@@ -109,8 +110,8 @@ float fscale( float originalMin, float originalMax, float newBegin, float newEnd
   zeroRefCurVal= inputValue - originalMin;
   normalizedCurVal=  zeroRefCurVal / OriginalRange;  
   if (originalMin > originalMax ) return 0;
-  if (invFlag == 0) rangedValue=  (pow(normalizedCurVal, curve) * NewRange) + newBegin;
-  else rangedValue=  newBegin - (pow(normalizedCurVal, curve) * NewRange); 
+  if (invFlag == 0) rangedValue=  (pow(normalizedCurVal, Curve) * NewRange) + newBegin;
+  else rangedValue=  newBegin - (pow(normalizedCurVal, Curve) * NewRange); 
   return rangedValue;
 }
 
@@ -194,8 +195,8 @@ void WriteConfig() {
   EEPROM.write(2,highByte(MinValue));
   EEPROM.write(3,lowByte(MaxValue)); 
   EEPROM.write(4,highByte(MaxValue));
-  EEPROM.write(5,lowByte(Gain));     
-  EEPROM.write(6,highByte(Gain));
+  EEPROM.write(5,lowByte(Curve));     
+  EEPROM.write(6,highByte(Curve));
   EEPROM.write(7,lowByte(LowTone));  
   EEPROM.write(8,highByte(LowTone));
   EEPROM.write(9,lowByte(HighTone)); 
@@ -208,7 +209,7 @@ void ReadConfig() {
   ShowLCD("Read Config...",0, true);
   MinValue= word(EEPROM.read(2),EEPROM.read(1));
   MaxValue= word(EEPROM.read(4),EEPROM.read(3));
-  Gain=     word(EEPROM.read(6),EEPROM.read(5));
+  Curve=    word(EEPROM.read(6),EEPROM.read(5));
   LowTone=  word(EEPROM.read(8),EEPROM.read(7));
   HighTone= word(EEPROM.read(10),EEPROM.read(9));  
   Display=  EEPROM.read(11);
@@ -228,7 +229,7 @@ void AutoAdjust() {
   //ShowLCD((String)TimeOutCounter, 1, true);
   while (TimeOutCounter < 2000) {
     Reading= ReadValue();
-    AudioTone= fscale(100,900,HighTone,LowTone,Reading,Gain);
+    AudioTone= fscale(100,900,HighTone,LowTone,Reading,Curve);
     NewTone(AudioPin, AudioTone);
     TimeOutCounter++;
     delay(10);
@@ -240,7 +241,7 @@ void AutoAdjust() {
   TimeOutCounter= 0;
   while (ReadKey() == None) {
     Reading= ReadValue();
-    AudioTone= fscale(100,900,HighTone,LowTone,Reading,Gain);
+    AudioTone= fscale(100,900,HighTone,LowTone,Reading,Curve);
     NewTone(AudioPin, AudioTone);
     if (Reading < LowestReading) {
       LowestReading= Reading;
@@ -312,10 +313,10 @@ void Menu() {
   }
   Esc= false;   
   while (!Esc) {
-    ShowLCD("Gain: "+(String)Gain, 1, true);
+    ShowLCD("Curve: "+(String)Curve, 1, true);
     delay(300);
-    if (KeyVal() == Down)   if (Gain > -5) Gain--;
-    if (KeyVal() == Up)     if (Gain <  5) Gain++;
+    if (KeyVal() == Down)   if (Curve > 0) Curve--;
+    if (KeyVal() == Up)     if (Curve < 5) Curve++;
     if (KeyVal() == Select) Esc= true;
   }
   Esc= false;
@@ -399,7 +400,7 @@ void loop() {
     if (!Display) ShowLCD("Running..",0, false);
   }
   if (InRange()) {
-    AudioTone= fscale(MinValue,MaxValue,HighTone,LowTone,Reading,Gain);
+    AudioTone= fscale(MinValue,MaxValue,HighTone,LowTone,Reading,Curve);
     NewTone(AudioPin, AudioTone);
   }
   else noNewTone(AudioPin); // Turn off the tone. 
