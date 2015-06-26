@@ -42,6 +42,7 @@ To Do:
  23-5-2015 Added some text in Auto adjust
  V3.1 26-6-2015
  Gain is replaced by Curve for better understanding.
+ Added Auto adjust window size. Default 200
  */
 
 #include <LiquidCrystal.h>
@@ -73,7 +74,8 @@ word    MinValue=         100;
 word    MaxValue=         800;
 word    LowTone=          100; 
 word    HighTone=         1750;
-int     Curve=            0;
+word    Curve=            0;
+word    AutoAdjustWindow= 200;
 word    UpdTime=          1000;
 byte    Display=          1; 
 byte    ResetAll=         0;
@@ -197,22 +199,29 @@ void WriteConfig() {
   EEPROM.write(4,highByte(MaxValue));
   EEPROM.write(5,lowByte(Curve));     
   EEPROM.write(6,highByte(Curve));
-  EEPROM.write(7,lowByte(LowTone));  
-  EEPROM.write(8,highByte(LowTone));
-  EEPROM.write(9,lowByte(HighTone)); 
-  EEPROM.write(10,highByte(HighTone));
-  EEPROM.write(11,Display);
+  
+  EEPROM.write(7,lowByte(AutoAdjustWindow));     
+  EEPROM.write(8,highByte(AutoAdjustWindow));  
+    
+  EEPROM.write(9,lowByte(LowTone));  
+  EEPROM.write(10,highByte(LowTone));
+  EEPROM.write(11,lowByte(HighTone)); 
+  EEPROM.write(12,highByte(HighTone));
+  EEPROM.write(13,Display);
   EEPROM.write(0,1);
 } 
 
 void ReadConfig() {
   ShowLCD("Read Config...",0, true);
-  MinValue= word(EEPROM.read(2),EEPROM.read(1));
-  MaxValue= word(EEPROM.read(4),EEPROM.read(3));
-  Curve=    word(EEPROM.read(6),EEPROM.read(5));
-  LowTone=  word(EEPROM.read(8),EEPROM.read(7));
-  HighTone= word(EEPROM.read(10),EEPROM.read(9));  
-  Display=  EEPROM.read(11);
+  MinValue=         word(EEPROM.read(2),EEPROM.read(1));
+  MaxValue=         word(EEPROM.read(4),EEPROM.read(3));
+  Curve=            word(EEPROM.read(6),EEPROM.read(5));
+  
+  AutoAdjustWindow= word(EEPROM.read(8),EEPROM.read(7)); 
+  
+  LowTone=          word(EEPROM.read(10),EEPROM.read(9));
+  HighTone=         word(EEPROM.read(12),EEPROM.read(11));  
+  Display=  EEPROM.read(13);
 }
 
 void EEPromClear() {
@@ -319,6 +328,18 @@ void Menu() {
     if (KeyVal() == Up)     if (Curve < 5) Curve++;
     if (KeyVal() == Select) Esc= true;
   }
+
+
+  Esc= false;   
+  while (!Esc) {
+    ShowLCD("AutoWindow: "+(String)AutoAdjustWindow, 1, true);
+    delay(300);
+    if (KeyVal() == Down)   if (AutoAdjustWindow > 50)   AutoAdjustWindow-= 10;
+    if (KeyVal() == Up)     if (AutoAdjustWindow < 300)  AutoAdjustWindow+= 10;
+    if (KeyVal() == Select) Esc= true;
+  }  
+  
+  
   Esc= false;
   while (!Esc) {
     ShowLCD("LowTone: "+(String)LowTone, 1, true);
@@ -340,7 +361,7 @@ void Menu() {
   }
   Esc= false;
   noNewTone(AudioPin);
-  Display=  EEPROM.read(11); //read value from rom setting instead of global  
+  Display=  EEPROM.read(13); //read value from rom setting instead of global  
   while (!Esc) {
     ShowLCD("Display: "+(String)DisplayType[Display], 1, true);
     delay(300);
