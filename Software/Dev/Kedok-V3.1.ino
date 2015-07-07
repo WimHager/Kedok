@@ -263,7 +263,7 @@ void AutoAdjust() {
   if (LowestReading < 820) {
     Beep(3,2000);
     MinValue= LowestReading-20;
-    MaxValue= MinValue+200;
+    MaxValue= MinValue+AutoAdjustWindow;
     ShowLCD("Config saved", 0, true);
     ShowLCD("Min "+(String)MinValue+" Max "+(String)MaxValue, 1, true);
     WriteConfig();
