@@ -43,7 +43,11 @@ To Do:
  V3.1 26-6-2015
  Gain is replaced by Curve for better understanding.
  Added Auto adjust window size. Default 200
+ 28-7-2015 Made SensorPin a variable
  */
+
+//Note Audio pin 3, 82 Ohm and 470N in serie
+//Opto resistor ??
 
 #include <LiquidCrystal.h>
 #include <NewTone.h>
@@ -82,6 +86,7 @@ byte    ResetAll=         0;
 char    *DisplayType[]  = {"None", "Value",  "Bar"};
 char    *FactoryReset[] = {"No", "Yes"};
 byte    AudioPin=         3;
+byte    SensorPin=        A1;
 int     LowFreq=          1500;
 
 long    PrevTime;
@@ -122,7 +127,7 @@ void Reset() {
 }  
 
 word ReadValue() {
-  return analogRead(A1);
+  return analogRead(SensorPin);
 }
 
 void Beep(byte Beeps, word Tone) {
