@@ -22,8 +22,9 @@ To Do:
  Battery level check?
  ShowLCD bug. no clear
  Update min max only if changed Static!
- Menu option to set auto adjust window, Benjamin prefers a window of 100 and a gain of -3
- Test if gain is reverse. Negative etting gives a positve gain. 
+ Always Sound. Added not tested yet!!
+ //Menu option to set auto adjust window, Benjamin prefers a window of 100 and a gain of -3
+ //Test if gain is reverse. Negative etting gives a positve gain. 
  //Sound during auto adjust wait.
  //More info if display readings. Sensor Min Max Lowest
  //Auto adjust auto stop if no lower reading  within 12 sec.
@@ -44,10 +45,11 @@ To Do:
  Gain is replaced by Curve for better understanding.
  Added Auto adjust window size. Default 200
  28-7-2015 Made SensorPin a variable
+ 30-7-2015 Added option to enable Always sound
  */
 
 //Note Audio pin 3, 82 Ohm and 470N in serie
-//Opto resistor ??
+//Opto resistor 68K
 
 #include <LiquidCrystal.h>
 #include <NewTone.h>
@@ -81,13 +83,14 @@ word    HighTone=         1750;
 word    Curve=            0;
 word    AutoAdjustWindow= 200;
 word    UpdTime=          1000;
-byte    Display=          1; 
+byte    Display=          1;
+byte    AlwaysSound=      0;
 byte    ResetAll=         0;
 char    *DisplayType[]  = {"None", "Value",  "Bar"};
 char    *FactoryReset[] = {"No", "Yes"};
 byte    AudioPin=         3;
 byte    SensorPin=        A1;
-int     LowFreq=          1500;
+int     LowFreq=          1500; // rename to a better to understand variable name
 
 long    PrevTime;
 word    Reading;
@@ -138,7 +141,8 @@ void Beep(byte Beeps, word Tone) {
 }
 
 boolean InRange() {
-  return ((Reading > MinValue) && (Reading < MaxValue)); 
+  if (AlwaysSound) return true;
+    else return ((Reading > MinValue) && (Reading < MaxValue)); 
 }
 
 String WordFormat(word Inp, byte Size) {
@@ -213,6 +217,7 @@ void WriteConfig() {
   EEPROM.write(11,lowByte(HighTone)); 
   EEPROM.write(12,highByte(HighTone));
   EEPROM.write(13,Display);
+  EEPROM.write(14,AlwaysSound);
   EEPROM.write(0,1);
 } 
 
@@ -226,7 +231,8 @@ void ReadConfig() {
   
   LowTone=          word(EEPROM.read(10),EEPROM.read(9));
   HighTone=         word(EEPROM.read(12),EEPROM.read(11));  
-  Display=  EEPROM.read(13);
+  Display=          EEPROM.read(13);
+  AlwaysSound=      EEPROM.read(14);
 }
 
 void EEPromClear() {
@@ -333,8 +339,6 @@ void Menu() {
     if (KeyVal() == Up)     if (Curve < 5) Curve++;
     if (KeyVal() == Select) Esc= true;
   }
-
-
   Esc= false;   
   while (!Esc) {
     ShowLCD("AutoWindow: "+(String)AutoAdjustWindow, 1, true);
@@ -343,8 +347,6 @@ void Menu() {
     if (KeyVal() == Up)     if (AutoAdjustWindow < 300)  AutoAdjustWindow+= 10;
     if (KeyVal() == Select) Esc= true;
   }  
-  
-  
   Esc= false;
   while (!Esc) {
     ShowLCD("LowTone: "+(String)LowTone, 1, true);
@@ -373,7 +375,15 @@ void Menu() {
     if (KeyVal() == Down)   if (Display > 0) Display--;
     if (KeyVal() == Up)     if (Display < 2) Display++;
     if (KeyVal() == Select) Esc= true;
-  }  
+  }
+  Esc= false;   
+  while (!Esc) {
+    ShowLCD("Always Sound: "+(String)AlwaysSound, 1, true);
+    delay(300);
+    if (KeyVal() == Down)   if (ResetAll > 0) ResetAll--;
+    if (KeyVal() == Up)     if (ResetAll < 1) ResetAll++;
+    if (KeyVal() == Select) Esc= true;
+  }
   Esc= false;   
   while (!Esc) {
     ShowLCD("Reset ALL: "+(String)FactoryReset[ResetAll], 1, true);
