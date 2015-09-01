@@ -46,6 +46,7 @@ To Do:
  Added Auto adjust window size. Default 200
  28-7-2015 Made SensorPin a variable
  30-7-2015 Added option to enable Always sound
+ 1-9-2015  Always sound bug, was not set in menu
  */
 
 //Note Audio pin 3, 82 Ohm and 470N in serie
@@ -62,7 +63,7 @@ int Melody[] = {
 int NoteDurations[] = { 
   4, 8, 8, 4, 4, 4, 4, 4 };
 
-const   char      Version[5]= "3.1";
+const   char      Version[5]= "3.11";
 const   byte      None=           0; 
 const   byte      Select=         1;
 const   byte      Left=           2; 
@@ -380,8 +381,8 @@ void Menu() {
   while (!Esc) {
     ShowLCD("Always Sound: "+(String)AlwaysSound, 1, true);
     delay(300);
-    if (KeyVal() == Down)   if (ResetAll > 0) ResetAll--;
-    if (KeyVal() == Up)     if (ResetAll < 1) ResetAll++;
+    if (KeyVal() == Down)   if (AlwaysSound > 0) AlwaysSound--;
+    if (KeyVal() == Up)     if (AlwaysSound < 1) AlwaysSound++;
     if (KeyVal() == Select) Esc= true;
   }
   Esc= false;   
