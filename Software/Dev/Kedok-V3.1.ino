@@ -21,8 +21,9 @@
 To Do:
  Battery level check?
  ShowLCD bug. no clear
+ Reset all if version updated
  Update min max only if changed Static!
- Always Sound. Added not tested yet!!
+ //Always Sound. Added not tested yet!!
  //Menu option to set auto adjust window, Benjamin prefers a window of 100 and a gain of -3
  //Test if gain is reverse. Negative etting gives a positve gain. 
  //Sound during auto adjust wait.
