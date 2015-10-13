@@ -23,12 +23,16 @@ To Do:
  ShowLCD bug. no clear
  Reset all if version updated
  Update min max only if changed Static!
- //Always Sound. Added not tested yet!!
+ Mode to use pull down resistor on phototransistor
+ Bug. while adjusting the MIN or UP parameter while shooting screen dos not return to running if Display is off.
+ Always Sound. Added not tested yet!!
  //Menu option to set auto adjust window, Benjamin prefers a window of 100 and a gain of -3
  //Test if gain is reverse. Negative etting gives a positve gain. 
  //Sound during auto adjust wait.
  //More info if display readings. Sensor Min Max Lowest
  //Auto adjust auto stop if no lower reading  within 12 sec.
+ 
+ //Loops free running 4150 with sound 1300
  
  
  V2.00 18-4-2015
@@ -93,6 +97,8 @@ char    *FactoryReset[] = {"No", "Yes"};
 byte    AudioPin=         3;
 byte    SensorPin=        A1;
 int     LowFreq=          1500; // rename to a better to understand variable name
+
+word    LoopCounter;
 
 long    PrevTime;
 word    Reading;
@@ -200,6 +206,7 @@ void Screen(boolean Dis) {
 
 void ShowValues() {
   ShowLCD("Sen:"+WordFormat(Reading,4)+ " Low:"+WordFormat(LowestReading,3),0, true);
+  //ShowLCD("Sen:"+WordFormat(Reading,4)+ " L:"+WordFormat(LoopCounter,4),0, true);
   ShowLCD("Max:"+WordFormat(MaxValue,4)+" Min:"+WordFormat(MinValue,3),1, true);
 }  
 
@@ -440,6 +447,7 @@ void loop() {
   if (InRange()) {
     AudioTone= fscale(MinValue,MaxValue,HighTone,LowTone,Reading,Curve);
     NewTone(AudioPin, AudioTone);
+    //delay(100);
   }
   else noNewTone(AudioPin); // Turn off the tone. 
   if (Reading < LowestReading) LowestReading= Reading; 
@@ -452,6 +460,6 @@ void loop() {
     if (KeyPressed == Down)   MoveSensorWindow(-5);
     if (KeyPressed == Up)     MoveSensorWindow(+5);
     if (KeyPressed == RightLong) AutoAdjust();
-  }  
+  }
 }
 
