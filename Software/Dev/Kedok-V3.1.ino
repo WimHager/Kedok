@@ -24,7 +24,7 @@ To Do:
  Reset all if version updated
  Update min max only if changed Static!
  Mode to use pull down resistor on phototransistor
- Bug. while adjusting the MIN or UP parameter while shooting screen dos not return to running if Display is off.
+ //Bug. while adjusting the MIN or UP parameter while shooting screen dos not return to running if Display is off.
  Always Sound. Added not tested yet!!
  //Menu option to set auto adjust window, Benjamin prefers a window of 100 and a gain of -3
  //Test if gain is reverse. Negative etting gives a positve gain. 
@@ -179,6 +179,7 @@ void MoveSensorWindow(int Val) {
   ShowLCD("Min "+(String)MinValue+" Max "+(String)MaxValue, 1, true);
   WriteConfig();
   delay(3000);
+  if (!Display) ShowLCD("Running..",0, false);
 }  
 
 void ShowLCD(String Text, byte Line, boolean Clear) {
