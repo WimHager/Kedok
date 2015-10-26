@@ -24,15 +24,14 @@ To Do:
  Reset all if version updated
  Update min max only if changed Static!
  Mode to use pull down resistor on phototransistor
- //Bug. while adjusting the MIN or UP parameter while shooting screen dos not return to running if Display is off.
  Always Sound. Added not tested yet!!
+ //Bug. while adjusting the MIN or UP parameter while shooting screen dos not return to running if Display is off.
  //Menu option to set auto adjust window, Benjamin prefers a window of 100 and a gain of -3
  //Test if gain is reverse. Negative etting gives a positve gain. 
  //Sound during auto adjust wait.
  //More info if display readings. Sensor Min Max Lowest
  //Auto adjust auto stop if no lower reading  within 12 sec.
- 
- //Loops free running 4150 with sound 1300
+ //Show settings instead of Running ... if displaymode is off
  
  
  V2.00 18-4-2015
@@ -49,13 +48,16 @@ To Do:
  V3.1 26-6-2015
  Gain is replaced by Curve for better understanding.
  Added Auto adjust window size. Default 200
- 28-7-2015 Made SensorPin a variable
- 30-7-2015 Added option to enable Always sound
- 1-9-2015  Always sound bug, was not set in menu
+ 28-7-2015  Made SensorPin a variable
+ 30-7-2015  Added option to enable Always sound
+ 1-9-2015   Always sound bug, was not set in menu
+ 24-10-2015 Screen bug update in no Dispaly mode
+ 26-10-2015 Removed cracking sound aiming near bulls-eye (removed inrange low value check)
  */
 
 //Note Audio pin 3, 82 Ohm and 470N in serie
 //Opto resistor 68K
+//Loops free running 4150 with sound 1300
 
 #include <LiquidCrystal.h>
 #include <NewTone.h>
@@ -68,7 +70,7 @@ int Melody[] = {
 int NoteDurations[] = { 
   4, 8, 8, 4, 4, 4, 4, 4 };
 
-const   char      Version[5]= "3.11";
+const   char      Version[5]= "3.12";
 const   byte      None=           0; 
 const   byte      Select=         1;
 const   byte      Left=           2; 
@@ -150,7 +152,8 @@ void Beep(byte Beeps, word Tone) {
 
 boolean InRange() {
   if (AlwaysSound) return true;
-    else return ((Reading > MinValue) && (Reading < MaxValue)); 
+    //else return ((Reading > MinValue) && (Reading < MaxValue));
+    else return Reading < MaxValue;
 }
 
 String WordFormat(word Inp, byte Size) {
@@ -425,6 +428,7 @@ void setup() {
   delay(1000);
   PrevTime= millis();
   LowestReading= MaxValue;
+  randomSeed(analogRead(0));
   if (!Display) ShowLCD("Running..",0, false);
   PlayMelody();
 }
@@ -448,7 +452,6 @@ void loop() {
   if (InRange()) {
     AudioTone= fscale(MinValue,MaxValue,HighTone,LowTone,Reading,Curve);
     NewTone(AudioPin, AudioTone);
-    //delay(100);
   }
   else noNewTone(AudioPin); // Turn off the tone. 
   if (Reading < LowestReading) LowestReading= Reading; 
