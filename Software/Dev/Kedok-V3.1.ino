@@ -53,6 +53,8 @@ To Do:
  1-9-2015   Always sound bug, was not set in menu
  24-10-2015 Screen bug update in no Dispaly mode
  26-10-2015 Removed cracking sound aiming near bulls-eye (removed inrange low value check)
+ 28-10-2015 Window Dec Inc set to 10
+ 28-10-2015 Redo of show status screen if display is disabled.
  */
 
 //Note Audio pin 3, 82 Ohm and 470N in serie
@@ -174,6 +176,11 @@ void PlayMelody() {
   }
 }
 
+void ShowStatusLCD() {
+  ShowLCD("Running..",0, false);
+  ShowLCD("Max:"+WordFormat(MaxValue,4)+" Min:"+WordFormat(MinValue,3),1, true);
+}  
+
 void MoveSensorWindow(int Val) {
   MinValue= MinValue + Val;
   MaxValue= MaxValue + Val;
@@ -182,7 +189,7 @@ void MoveSensorWindow(int Val) {
   ShowLCD("Min "+(String)MinValue+" Max "+(String)MaxValue, 1, true);
   WriteConfig();
   delay(3000);
-  if (!Display) ShowLCD("Running..",0, false);
+  if (!Display) ShowStatusLCD();
 }  
 
 void ShowLCD(String Text, byte Line, boolean Clear) {
@@ -202,7 +209,7 @@ void Screen(boolean Dis) {
   if (Dis) {
     Display= None;
     lcd.clear();
-    ShowLCD("Running..",0, false);
+    ShowStatusLCD();
   }
   else Display= 1;
   delay(500); 
@@ -295,7 +302,7 @@ void AutoAdjust() {
   }
   else Beep(6,100);
   lcd.clear();
-  if (!Display) ShowLCD("Running..",0, false); 
+  if (!Display)ShowStatusLCD(); 
 } 
 
 byte KeyVal() {
@@ -413,7 +420,7 @@ void Menu() {
   ShowLCD("Saved......",1,true);
   delay(3000);
   lcd.clear();
-  if (!Display) ShowLCD("Running..",0, false); 
+  if (!Display) ShowStatusLCD(); 
 } 
 
 void setup() {
@@ -429,7 +436,7 @@ void setup() {
   PrevTime= millis();
   LowestReading= MaxValue;
   randomSeed(analogRead(0));
-  if (!Display) ShowLCD("Running..",0, false);
+  if (!Display) ShowStatusLCD();
   PlayMelody();
 }
 
@@ -447,7 +454,7 @@ void loop() {
     lcd.clear();
     ShowLCD("Lower Min Value!",0,true);
     Beep(3,300);
-    if (!Display) ShowLCD("Running..",0, false);
+    if (!Display) ShowStatusLCD();
   }
   if (InRange()) {
     AudioTone= fscale(MinValue,MaxValue,HighTone,LowTone,Reading,Curve);
@@ -461,8 +468,8 @@ void loop() {
     if (KeyPressed == Right)  LowestReading= MaxValue;
     if (KeyPressed == Left)   if (Display) Screen(Disable); 
     else Screen(Enable);
-    if (KeyPressed == Down)   MoveSensorWindow(-5);
-    if (KeyPressed == Up)     MoveSensorWindow(+5);
+    if (KeyPressed == Down)   MoveSensorWindow(-10);
+    if (KeyPressed == Up)     MoveSensorWindow(+10);
     if (KeyPressed == RightLong) AutoAdjust();
   }
 }
