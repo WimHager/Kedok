@@ -25,6 +25,7 @@ To Do:
  Update min max only if changed Static!
  Mode to use pull down resistor on phototransistor
  Always Sound. Added not tested yet!!
+ Change menu always sound from 0/1 to Y/N
  //Bug. while adjusting the MIN or UP parameter while shooting screen dos not return to running if Display is off.
  //Menu option to set auto adjust window, Benjamin prefers a window of 100 and a gain of -3
  //Test if gain is reverse. Negative etting gives a positve gain. 
