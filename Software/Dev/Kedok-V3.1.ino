@@ -25,7 +25,7 @@ To Do:
  Update min max only if changed Static!
  Mode to use pull down resistor on phototransistor
  Always Sound. Added not tested yet!!
- Change menu always sound from 0/1 to Y/N
+ //Make WordToStr better so it fits all sizes
  //Bug. while adjusting the MIN or UP parameter while shooting screen dos not return to running if Display is off.
  //Menu option to set auto adjust window, Benjamin prefers a window of 100 and a gain of -3
  //Test if gain is reverse. Negative etting gives a positve gain. 
@@ -73,7 +73,7 @@ int Melody[] = {
 int NoteDurations[] = { 
   4, 8, 8, 4, 4, 4, 4, 4 };
 
-const   char      Version[5]= "3.12";
+const   char      Version[5]= "3.13";
 const   byte      None=           0; 
 const   byte      Select=         1;
 const   byte      Left=           2; 
@@ -97,8 +97,8 @@ word    UpdTime=          1000;
 byte    Display=          1;
 byte    AlwaysSound=      0;
 byte    ResetAll=         0;
-char    *DisplayType[]  = {"None", "Value",  "Bar"};
-char    *FactoryReset[] = {"No", "Yes"};
+char    *DisplayType[]=   {"None", "Value",  "Bar"};
+char    *YesNoArr[]=      {"N", "Y"};
 byte    AudioPin=         3;
 byte    SensorPin=        A1;
 int     LowFreq=          1500; // rename to a better to understand variable name
@@ -159,10 +159,9 @@ boolean InRange() {
     else return Reading < MaxValue;
 }
 
-String WordFormat(word Inp, byte Size) {
+String WordToStr(word Inp, byte Size) {
   String Str;
-  if (Size==4) Str= "0000"; 
-  else Str= "000";
+  for (byte C= 0; C<Size; C++) Str+= "0";
   String WordStr= (String)Inp;
   byte Len= WordStr.length();
   for (byte C= 0; C<Len; C++) Str[C+Str.length()-Len]= WordStr[C];
@@ -179,7 +178,7 @@ void PlayMelody() {
 
 void ShowStatusLCD() {
   ShowLCD("Running..",0, false);
-  ShowLCD("Max:"+WordFormat(MaxValue,4)+" Min:"+WordFormat(MinValue,3),1, true);
+  ShowLCD("L:"+WordToStr(MinValue,3)+" H:"+WordToStr(MaxValue,3)+" C:"+WordToStr(Curve,2),1, true);
 }  
 
 void MoveSensorWindow(int Val) {
@@ -217,9 +216,9 @@ void Screen(boolean Dis) {
 }
 
 void ShowValues() {
-  ShowLCD("Sen:"+WordFormat(Reading,4)+ " Low:"+WordFormat(LowestReading,3),0, true);
+  ShowLCD("Sen:"+WordToStr(Reading,4)+ " Low:"+WordToStr(LowestReading,3),0, true);
   //ShowLCD("Sen:"+WordFormat(Reading,4)+ " L:"+WordFormat(LoopCounter,4),0, true);
-  ShowLCD("Max:"+WordFormat(MaxValue,4)+" Min:"+WordFormat(MinValue,3),1, true);
+  ShowLCD("Max:"+WordToStr(MaxValue,4)+" Min:"+WordToStr(MinValue,3),1, true);
 }  
 
 void WriteConfig() {
@@ -399,7 +398,7 @@ void Menu() {
   }
   Esc= false;   
   while (!Esc) {
-    ShowLCD("Always Sound: "+(String)AlwaysSound, 1, true);
+    ShowLCD("Always Sound: "+(String)YesNoArr[AlwaysSound], 1, true);
     delay(300);
     if (KeyVal() == Down)   if (AlwaysSound > 0) AlwaysSound--;
     if (KeyVal() == Up)     if (AlwaysSound < 1) AlwaysSound++;
@@ -407,7 +406,7 @@ void Menu() {
   }
   Esc= false;   
   while (!Esc) {
-    ShowLCD("Reset ALL: "+(String)FactoryReset[ResetAll], 1, true);
+    ShowLCD("Reset ALL: "+(String)YesNoArr[ResetAll], 1, true);
     delay(300);
     if (KeyVal() == Down)   if (ResetAll > 0) ResetAll--;
     if (KeyVal() == Up)     if (ResetAll < 1) ResetAll++;
@@ -427,8 +426,8 @@ void Menu() {
 void setup() {
   pinMode(A1, INPUT);
   lcd.begin(16, 2);
-  ShowLCD("Version "+(String)Version,0, true);
-  delay(800);
+  ShowLCD("Kedok V "+(String)Version,0, true);
+  delay(1000);
   ShowLCD("Starting...",0, true);
   delay(500);
   if (EEPROM.read(0)==1) ReadConfig();
