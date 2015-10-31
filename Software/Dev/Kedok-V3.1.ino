@@ -22,9 +22,8 @@ To Do:
  Battery level check?
  ShowLCD bug. no clear
  Reset all if version updated
- Update min max only if changed Static!
- Mode to use pull down resistor on phototransistor
  Always Sound. Added not tested yet!!
+ Better Auto adjust
  //Make WordToStr better so it fits all sizes
  //Bug. while adjusting the MIN or UP parameter while shooting screen dos not return to running if Display is off.
  //Menu option to set auto adjust window, Benjamin prefers a window of 100 and a gain of -3
@@ -56,6 +55,7 @@ To Do:
  26-10-2015 Removed cracking sound aiming near bulls-eye (removed inrange low value check)
  28-10-2015 Window Dec Inc set to 10
  28-10-2015 Redo of show status screen if display is disabled.
+ 31-10-2015 Added Owner name, shown when booting.
  */
 
 //Note Audio pin 3, 82 Ohm and 470N in serie
@@ -73,7 +73,8 @@ int Melody[] = {
 int NoteDurations[] = { 
   4, 8, 8, 4, 4, 4, 4, 4 };
 
-const   char      Version[5]= "3.13";
+const   char      Version[5]="3.13";
+const   char      Owner[10]=     "";
 const   byte      None=           0; 
 const   byte      Select=         1;
 const   byte      Left=           2; 
@@ -83,33 +84,33 @@ const   byte      Right=          5;
 const   byte      RightLong=     15;
 const   byte      Value=          1;
 const   byte      Bar=            2;
-const   boolean   Disable=        true;
-const   boolean   Enable=         false;
+const   boolean   Disable=     true;
+const   boolean   Enable=     false;
 const   char      EmptyLine[17]=  "                ";
 
-word    MinValue=         100;
-word    MaxValue=         800;
-word    LowTone=          100; 
-word    HighTone=         1750;
-word    Curve=            0;
-word    AutoAdjustWindow= 200;
-word    UpdTime=          1000;
-byte    Display=          1;
-byte    AlwaysSound=      0;
-byte    ResetAll=         0;
-char    *DisplayType[]=   {"None", "Value",  "Bar"};
-char    *YesNoArr[]=      {"N", "Y"};
-byte    AudioPin=         3;
-byte    SensorPin=        A1;
-int     LowFreq=          1500; // rename to a better to understand variable name
-
-word    LoopCounter;
+word    MinValue=                100;
+word    MaxValue=                800;
+word    LowTone=                 100; 
+word    HighTone=               1750;
+word    Curve=                     0;
+word    AutoAdjustWindow=        200;
+word    UpdTime=                1000;
+byte    Display=                   1;
+byte    AlwaysSound=               0;
+byte    ResetAll=                  0;
+byte    AudioPin=                  3;
+byte    SensorPin=                A1;
+int     LowFreq=                1500; // rename to a better to understand variable name
+word    AutoAdjustGetReadyTime= 2000; // 20 Seconds
+char    *DisplayType[]= {"None", "Value",  "Bar"};
+char    *YesNoArr[]=    {"N", "Y"};
 
 long    PrevTime;
 word    Reading;
 word    AudioTone;
 word    LowestReading;
 byte    KeyPressed;
+word    LoopCounter;
 
 float fscale( float originalMin, float originalMax, float newBegin, float newEnd, float inputValue, float Curve){
   float   OriginalRange=    0;
@@ -217,7 +218,6 @@ void Screen(boolean Dis) {
 
 void ShowValues() {
   ShowLCD("Sen:"+WordToStr(Reading,4)+ " Low:"+WordToStr(LowestReading,3),0, true);
-  //ShowLCD("Sen:"+WordFormat(Reading,4)+ " L:"+WordFormat(LoopCounter,4),0, true);
   ShowLCD("Max:"+WordToStr(MaxValue,4)+" Min:"+WordToStr(MinValue,3),1, true);
 }  
 
@@ -267,7 +267,7 @@ void AutoAdjust() {
   ShowLCD("Auto Adjust.", 0, true);
   ShowLCD("Get ready.", 1, true);
   //ShowLCD((String)TimeOutCounter, 1, true);
-  while (TimeOutCounter < 2000) {
+  while (TimeOutCounter < AutoAdjustGetReadyTime) {
     Reading= ReadValue();
     AudioTone= fscale(100,900,HighTone,LowTone,Reading,Curve);
     NewTone(AudioPin, AudioTone);
@@ -426,7 +426,8 @@ void Menu() {
 void setup() {
   pinMode(A1, INPUT);
   lcd.begin(16, 2);
-  ShowLCD("Kedok V "+(String)Version,0, true);
+  ShowLCD("Kedok "+(String)Version,0, true);
+  ShowLCD(Owner,1, false);
   delay(1000);
   ShowLCD("Starting...",0, true);
   delay(500);
@@ -435,7 +436,6 @@ void setup() {
   delay(1000);
   PrevTime= millis();
   LowestReading= MaxValue;
-  randomSeed(analogRead(0));
   if (!Display) ShowStatusLCD();
   PlayMelody();
 }
