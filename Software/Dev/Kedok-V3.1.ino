@@ -24,6 +24,7 @@ To Do:
  Reset all if version updated
  Always Sound. Added not tested yet!!
  Better Auto adjust
+ SetSensorWindowToLowestRead()
  //Make WordToStr better so it fits all sizes
  //Bug. while adjusting the MIN or UP parameter while shooting screen dos not return to running if Display is off.
  //Menu option to set auto adjust window, Benjamin prefers a window of 100 and a gain of -3
@@ -56,6 +57,7 @@ To Do:
  28-10-2015 Window Dec Inc set to 10
  28-10-2015 Redo of show status screen if display is disabled.
  31-10-2015 Added Owner name, shown when booting.
+ 02-11-2015 Added auto set Min value with a warning by pressing 3 sec down key
  */
 
 //Note Audio pin 3, 82 Ohm and 470N in serie
@@ -77,8 +79,9 @@ const   char      Version[5]="3.13";
 const   char      Owner[10]=     "";
 const   byte      None=           0; 
 const   byte      Select=         1;
-const   byte      Left=           2; 
+const   byte      Left=           2;
 const   byte      Down=           3;
+const   byte      DownLong=      13;
 const   byte      Up=             4; 
 const   byte      Right=          5;
 const   byte      RightLong=     15;
@@ -109,6 +112,7 @@ long    PrevTime;
 word    Reading;
 word    AudioTone;
 word    LowestReading;
+word    WarningReading;
 byte    KeyPressed;
 word    LoopCounter;
 
@@ -185,6 +189,18 @@ void ShowStatusLCD() {
 void MoveSensorWindow(int Val) {
   MinValue= MinValue + Val;
   MaxValue= MaxValue + Val;
+  Beep(2,300);
+  ShowLCD("Settings saved..",0, true);
+  ShowLCD("Min "+(String)MinValue+" Max "+(String)MaxValue, 1, true);
+  WriteConfig();
+  delay(3000);
+  if (!Display) ShowStatusLCD();
+}  
+
+void MoveSensorWindowToLowestRead() {
+  word SensorWindow= MaxValue - MinValue;
+  MinValue= WarningReading-10;
+  MaxValue= MinValue+SensorWindow;
   Beep(2,300);
   ShowLCD("Settings saved..",0, true);
   ShowLCD("Min "+(String)MinValue+" Max "+(String)MaxValue, 1, true);
@@ -436,6 +452,7 @@ void setup() {
   delay(1000);
   PrevTime= millis();
   LowestReading= MaxValue;
+  WarningReading= MinValue;
   if (!Display) ShowStatusLCD();
   PlayMelody();
 }
@@ -451,6 +468,7 @@ void loop() {
     }
   }  
   if (Reading < MinValue) {
+    WarningReading= Reading;
     lcd.clear();
     ShowLCD("Lower Min Value!",0,true);
     Beep(3,300);
@@ -464,12 +482,13 @@ void loop() {
   if (Reading < LowestReading) LowestReading= Reading; 
   KeyPressed= ReadKey();
   if (KeyPressed) {  
-    if (KeyPressed == Select) Menu();
-    if (KeyPressed == Right)  LowestReading= MaxValue;
-    if (KeyPressed == Left)   if (Display) Screen(Disable); 
+    if (KeyPressed == Select)    Menu();
+    if (KeyPressed == Right)     LowestReading= MaxValue;
+    if (KeyPressed == Left)      if (Display) Screen(Disable); 
     else Screen(Enable);
-    if (KeyPressed == Down)   MoveSensorWindow(-10);
-    if (KeyPressed == Up)     MoveSensorWindow(+10);
+    if (KeyPressed == Down)      MoveSensorWindow(-10);
+    if (KeyPressed == DownLong)  MoveSensorWindowToLowestRead();
+    if (KeyPressed == Up)        MoveSensorWindow(+10);
     if (KeyPressed == RightLong) AutoAdjust();
   }
 }
