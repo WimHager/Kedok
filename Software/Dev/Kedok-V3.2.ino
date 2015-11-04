@@ -24,7 +24,8 @@ To Do:
  Reset all if version updated
  Always Sound. Added not tested yet!!
  Better Auto adjust
- SetSensorWindowToLowestRead()
+ Better way to find the target card. Idea:  if sensor-read < Min + 2 x Windowsize set sensor window twice the size
+ //SetSensorWindowToLowestRead()
  //Make WordToStr better so it fits all sizes
  //Bug. while adjusting the MIN or UP parameter while shooting screen dos not return to running if Display is off.
  //Menu option to set auto adjust window, Benjamin prefers a window of 100 and a gain of -3
@@ -58,6 +59,8 @@ To Do:
  28-10-2015 Redo of show status screen if display is disabled.
  31-10-2015 Added Owner name, shown when booting.
  02-11-2015 Added auto set Min value with a warning by pressing 3 sec down key
+ V3.2 04-11-2015
+ 
  */
 
 //Note Audio pin 3, 82 Ohm and 470N in serie
@@ -75,7 +78,7 @@ int Melody[] = {
 int NoteDurations[] = { 
   4, 8, 8, 4, 4, 4, 4, 4 };
 
-const   char      Version[5]="3.13";
+const   char      Version[5]="3.20";
 const   char      Owner[10]=     "";
 const   byte      None=           0; 
 const   byte      Select=         1;
