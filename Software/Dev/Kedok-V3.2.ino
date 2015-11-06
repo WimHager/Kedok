@@ -22,8 +22,9 @@ To Do:
  Battery level check?
  ShowLCD bug. no clear
  Reset all if version updated
- Always Sound. Added not tested yet!!
  Better Auto adjust
+ //Always Sound. Added not tested yet!!
+ //Remove always sound no-one liked it.
  //new inrange for bar reading
  //Better way to find the target card. Idea:  if sensor-read < Min + 2 x Windowsize set sensor window twice the size
  //SetSensorWindowToLowestRead()
@@ -35,7 +36,7 @@ To Do:
  //More info if display readings. Sensor Min Max Lowest
  //Auto adjust auto stop if no lower reading  within 12 sec.
  //Show settings instead of Running ... if displaymode is off
- 
+
  
  V2.00 18-4-2015
  Compiled with 1.0.5
@@ -62,6 +63,7 @@ To Do:
  02-11-2015 Added auto set Min value with a warning by pressing 3 sec down key
  V3.2 04-11-2015
  06-11-2015 New Kernel for better target card find
+ 06-11-2015 Removed Always sound, no-one liked it.
  */
 
 //Note Audio pin 3, 82 Ohm and 470N in serie
@@ -103,7 +105,7 @@ word    Curve=                     0;
 word    AutoAdjustWindow=        200;
 word    UpdTime=                1000;
 byte    Display=                   1;
-byte    AlwaysSound=               0;
+byte    ThresholdWindow=         150;
 byte    ResetAll=                  0;
 byte    AudioPin=                  3;
 byte    SensorPin=                A1;
@@ -181,8 +183,7 @@ String WordToStr(word Inp, byte Size) {
 }  
 
 boolean InRange() {
-  if (AlwaysSound) return true;
-    else return ((Reading > MinValue) && (Reading < MaxValue));
+  return ((Reading > MinValue) && (Reading < MaxValue));
 }
 
 void PlayMelody() {
@@ -254,18 +255,16 @@ void WriteConfig() {
   EEPROM.write(2,highByte(MinValue));
   EEPROM.write(3,lowByte(MaxValue)); 
   EEPROM.write(4,highByte(MaxValue));
-  EEPROM.write(5,lowByte(Curve));     
-  EEPROM.write(6,highByte(Curve));
-  
-  EEPROM.write(7,lowByte(AutoAdjustWindow));     
-  EEPROM.write(8,highByte(AutoAdjustWindow));  
-    
-  EEPROM.write(9,lowByte(LowTone));  
-  EEPROM.write(10,highByte(LowTone));
-  EEPROM.write(11,lowByte(HighTone)); 
-  EEPROM.write(12,highByte(HighTone));
-  EEPROM.write(13,Display);
-  EEPROM.write(14,AlwaysSound);
+  EEPROM.write(5,ThresholdWindow);
+  EEPROM.write(6,lowByte(Curve));     
+  EEPROM.write(7,highByte(Curve));
+  EEPROM.write(8,lowByte(AutoAdjustWindow));     
+  EEPROM.write(9,highByte(AutoAdjustWindow));  
+  EEPROM.write(10,lowByte(LowTone));  
+  EEPROM.write(11,highByte(LowTone));
+  EEPROM.write(12,lowByte(HighTone)); 
+  EEPROM.write(13,highByte(HighTone));
+  EEPROM.write(14,Display);
   EEPROM.write(0,1);
 } 
 
@@ -273,14 +272,12 @@ void ReadConfig() {
   ShowLCD("Read Config...",0, true);
   MinValue=         word(EEPROM.read(2),EEPROM.read(1));
   MaxValue=         word(EEPROM.read(4),EEPROM.read(3));
-  Curve=            word(EEPROM.read(6),EEPROM.read(5));
-  
-  AutoAdjustWindow= word(EEPROM.read(8),EEPROM.read(7)); 
-  
-  LowTone=          word(EEPROM.read(10),EEPROM.read(9));
-  HighTone=         word(EEPROM.read(12),EEPROM.read(11));  
-  Display=          EEPROM.read(13);
-  AlwaysSound=      EEPROM.read(14);
+  ThresholdWindow=  EEPROM.read(5);
+  Curve=            word(EEPROM.read(7),EEPROM.read(6));
+  AutoAdjustWindow= word(EEPROM.read(9),EEPROM.read(8)); 
+  LowTone=          word(EEPROM.read(11),EEPROM.read(10));
+  HighTone=         word(EEPROM.read(13),EEPROM.read(12));  
+  Display=          EEPROM.read(14);
 }
 
 void EEPromClear() {
@@ -379,6 +376,14 @@ void Menu() {
     if (KeyVal() == Up)     if (MaxValue < 990) MaxValue+= 5;
     if (KeyVal() == Select) Esc= true;
   }
+  Esc= false; 
+  while (!Esc) {
+    ShowLCD("Threshold: "+(String)ThresholdWindow, 1, true);
+    delay(300);
+    if (KeyVal() == Down)   if (ThresholdWindow > 10)  ThresholdWindow-= 10;
+    if (KeyVal() == Up)     if (ThresholdWindow < 190) ThresholdWindow+= 10;
+    if (KeyVal() == Select) Esc= true;
+  }
   Esc= false;   
   while (!Esc) {
     ShowLCD("Curve: "+(String)Curve, 1, true);
@@ -416,20 +421,12 @@ void Menu() {
   }
   Esc= false;
   noNewTone(AudioPin);
-  Display=  EEPROM.read(13); //read value from rom setting instead of global  
+  Display=  EEPROM.read(14); //read value from rom setting instead of global  
   while (!Esc) {
     ShowLCD("Display: "+(String)DisplayType[Display], 1, true);
     delay(300);
     if (KeyVal() == Down)   if (Display > 0) Display--;
     if (KeyVal() == Up)     if (Display < 2) Display++;
-    if (KeyVal() == Select) Esc= true;
-  }
-  Esc= false;   
-  while (!Esc) {
-    ShowLCD("Always Sound: "+(String)YesNoArr[AlwaysSound], 1, true);
-    delay(300);
-    if (KeyVal() == Down)   if (AlwaysSound > 0) AlwaysSound--;
-    if (KeyVal() == Up)     if (AlwaysSound < 1) AlwaysSound++;
     if (KeyVal() == Select) Esc= true;
   }
   Esc= false;   
@@ -486,7 +483,7 @@ void loop() {
   }else if (Reading < MaxValue) {
      AudioTone= fscale(MinValue,MaxValue,HighTone,LowTone,Reading,Curve);
      NewTone(AudioPin, AudioTone);
-  }else if (Reading < (MaxValue+200)) {
+  }else if (Reading < (MaxValue+ThresholdWindow)) {
      NewTone(AudioPin, 80);  
   }else noNewTone(AudioPin); // Turn off the tone. 
 //-----------------
