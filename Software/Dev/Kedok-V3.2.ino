@@ -24,7 +24,8 @@ To Do:
  Reset all if version updated
  Always Sound. Added not tested yet!!
  Better Auto adjust
- Better way to find the target card. Idea:  if sensor-read < Min + 2 x Windowsize set sensor window twice the size
+ //new inrange for bar reading
+ //Better way to find the target card. Idea:  if sensor-read < Min + 2 x Windowsize set sensor window twice the size
  //SetSensorWindowToLowestRead()
  //Make WordToStr better so it fits all sizes
  //Bug. while adjusting the MIN or UP parameter while shooting screen dos not return to running if Display is off.
@@ -60,7 +61,7 @@ To Do:
  31-10-2015 Added Owner name, shown when booting.
  02-11-2015 Added auto set Min value with a warning by pressing 3 sec down key
  V3.2 04-11-2015
- 
+ 06-11-2015 New Kernel for better target card find
  */
 
 //Note Audio pin 3, 82 Ohm and 470N in serie
@@ -161,11 +162,14 @@ void Beep(byte Beeps, word Tone) {
   }
 }
 
-boolean InRange() {
-  if (AlwaysSound) return true;
-    //else return ((Reading > MinValue) && (Reading < MaxValue));
-    else return Reading < MaxValue;
-}
+void LowReadWarning() {
+    noNewTone(AudioPin); // Turn off the tone.
+    WarningReading= Reading;
+    lcd.clear();
+    ShowLCD("Lower Min Value!",0,true);
+    Beep(3,300);
+    if (!Display) ShowStatusLCD();
+}  
 
 String WordToStr(word Inp, byte Size) {
   String Str;
@@ -175,6 +179,11 @@ String WordToStr(word Inp, byte Size) {
   for (byte C= 0; C<Len; C++) Str[C+Str.length()-Len]= WordStr[C];
   return Str; 
 }  
+
+boolean InRange() {
+  if (AlwaysSound) return true;
+    else return ((Reading > MinValue) && (Reading < MaxValue));
+}
 
 void PlayMelody() {
   for (int ThisNote= 0; ThisNote < 8; ThisNote++) {
@@ -469,19 +478,19 @@ void loop() {
       else ShowBar(2);
       PrevTime= millis();
     }
-  }  
+  } 
+  
+ //---------------- 
   if (Reading < MinValue) {
-    WarningReading= Reading;
-    lcd.clear();
-    ShowLCD("Lower Min Value!",0,true);
-    Beep(3,300);
-    if (!Display) ShowStatusLCD();
-  }
-  if (InRange()) {
-    AudioTone= fscale(MinValue,MaxValue,HighTone,LowTone,Reading,Curve);
-    NewTone(AudioPin, AudioTone);
-  }
-  else noNewTone(AudioPin); // Turn off the tone. 
+     LowReadWarning(); 
+  }else if (Reading < MaxValue) {
+     AudioTone= fscale(MinValue,MaxValue,HighTone,LowTone,Reading,Curve);
+     NewTone(AudioPin, AudioTone);
+  }else if (Reading < (MaxValue+200)) {
+     NewTone(AudioPin, 80);  
+  }else noNewTone(AudioPin); // Turn off the tone. 
+//-----------------
+
   if (Reading < LowestReading) LowestReading= Reading; 
   KeyPressed= ReadKey();
   if (KeyPressed) {  
