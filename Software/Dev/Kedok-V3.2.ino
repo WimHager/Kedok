@@ -23,8 +23,10 @@ To Do:
  ShowLCD bug. no clear
  Reset all if version updated
  Better Auto adjust
+ Reverse sound pitch
+ Logging??
  //Always Sound. Added not tested yet!!
- //Remove always sound no-one liked it.
+ //Removed "Always sound" no-one liked it.
  //new inrange for bar reading
  //Better way to find the target card. Idea:  if sensor-read < Min + 2 x Windowsize set sensor window twice the size
  //SetSensorWindowToLowestRead()
@@ -64,6 +66,7 @@ To Do:
  V3.2 04-11-2015
  06-11-2015 New Kernel for better target card find
  06-11-2015 Removed Always sound, no-one liked it.
+ 14-11-2015 Added Logging.
  */
 
 //Note Audio pin 3, 82 Ohm and 470N in serie
@@ -81,7 +84,7 @@ int Melody[] = {
 int NoteDurations[] = { 
   4, 8, 8, 4, 4, 4, 4, 4 };
 
-const   char      Version[5]="3.20";
+const   char      Version[5]="3.21";
 const   char      Owner[10]=     "";
 const   byte      None=           0; 
 const   byte      Select=         1;
@@ -103,24 +106,29 @@ word    LowTone=                 100;
 word    HighTone=               1750;
 word    Curve=                     0;
 word    AutoAdjustWindow=        200;
-word    UpdTime=                1000;
+word    DispUpdTime=            1000; //1 sec Screen update 
 byte    Display=                   1;
 byte    ThresholdWindow=         150;
+byte    LogMode=                   0;
+byte    LogBufferStart=           20; 
+word    LogUpdTime=              250; //4 times a second for 1000 values about 4 Min. logging 
 byte    ResetAll=                  0;
 byte    AudioPin=                  3;
 byte    SensorPin=                A1;
-int     LowFreq=                1500; // rename to a better to understand variable name
 word    AutoAdjustGetReadyTime= 2000; // 20 Seconds
 char    *DisplayType[]= {"None", "Value",  "Bar"};
 char    *YesNoArr[]=    {"N", "Y"};
+char    *LoggingModes[]={"Off", "On", "Play"};
 
-long    PrevTime;
+long    PrevDispTime;
+long    PrevLogTime;
 word    Reading;
 word    AudioTone;
 word    LowestReading;
 word    WarningReading;
 byte    KeyPressed;
 word    LoopCounter;
+word    LogCounter; 
 
 float fscale( float originalMin, float originalMax, float newBegin, float newEnd, float inputValue, float Curve){
   float   OriginalRange=    0;
@@ -186,6 +194,32 @@ boolean InRange() {
   return ((Reading > MinValue) && (Reading < MaxValue));
 }
 
+void StopLogging() {
+   LogMode= 0;
+   LogCounter= 0;
+   lcd.clear();
+   ShowLCD("Loggin stopped.",0,true);
+   Beep(2,300);
+   if (!Display) ShowStatusLCD();
+}  
+
+void WriteLog(word Value) {
+  if ((millis()-PrevLogTime) > LogUpdTime) {
+    if (LogCounter < 1000) {
+       EEPROM.update(LogCounter+LogBufferStart, map(Value, MinValue, MaxValue, 0, 255));
+       LogCounter++;
+       PrevLogTime= millis();
+    }else StopLogging();
+  }  
+ }  
+
+void OutputLog() {
+  for (int C= 20; C<1000; C++) { 
+    Serial.println(EEPROM.read(C));
+  }
+  StopLogging();
+}  
+
 void PlayMelody() {
   for (int ThisNote= 0; ThisNote < 8; ThisNote++) {
     int NoteDuration = 1000/NoteDurations[ThisNote];
@@ -247,7 +281,7 @@ void Screen(boolean Dis) {
 
 void ShowValues() {
   ShowLCD("Sen:"+WordToStr(Reading,4)+ " Low:"+WordToStr(LowestReading,3),0, true);
-  ShowLCD("Max:"+WordToStr(MaxValue,4)+" Min:"+WordToStr(MinValue,3),1, true);
+  ShowLCD("Min:"+WordToStr(MinValue,4)+" Max:"+WordToStr(MaxValue,3),1, true);
 }  
 
 void WriteConfig() {
@@ -264,7 +298,8 @@ void WriteConfig() {
   EEPROM.write(11,highByte(LowTone));
   EEPROM.write(12,lowByte(HighTone)); 
   EEPROM.write(13,highByte(HighTone));
-  EEPROM.write(14,Display);
+  EEPROM.write(14,LogMode);
+  EEPROM.write(15,Display);
   EEPROM.write(0,1);
 } 
 
@@ -276,8 +311,9 @@ void ReadConfig() {
   Curve=            word(EEPROM.read(7),EEPROM.read(6));
   AutoAdjustWindow= word(EEPROM.read(9),EEPROM.read(8)); 
   LowTone=          word(EEPROM.read(11),EEPROM.read(10));
-  HighTone=         word(EEPROM.read(13),EEPROM.read(12));  
-  Display=          EEPROM.read(14);
+  HighTone=         word(EEPROM.read(13),EEPROM.read(12));
+  LogMode=          EEPROM.read(14);  
+  Display=          EEPROM.read(15);
 }
 
 void EEPromClear() {
@@ -421,12 +457,20 @@ void Menu() {
   }
   Esc= false;
   noNewTone(AudioPin);
-  Display=  EEPROM.read(14); //read value from rom setting instead of global  
+  Display=  EEPROM.read(15); //read value from rom setting instead of global  
   while (!Esc) {
     ShowLCD("Display: "+(String)DisplayType[Display], 1, true);
     delay(300);
     if (KeyVal() == Down)   if (Display > 0) Display--;
     if (KeyVal() == Up)     if (Display < 2) Display++;
+    if (KeyVal() == Select) Esc= true;
+  }
+  Esc= false;
+  while (!Esc) {
+    ShowLCD("Logging: "+(String)LoggingModes[LogMode], 1, true);
+    delay(300);
+    if (KeyVal() == Down)   if (LogMode > 0) LogMode--;
+    if (KeyVal() == Up)     if (LogMode < 2) LogMode++;
     if (KeyVal() == Select) Esc= true;
   }
   Esc= false;   
@@ -441,6 +485,9 @@ void Menu() {
     EEPROM.write(0,0); 
     Reset(); 
   }
+  if (LogMode==2) {
+    OutputLog();
+  }  
   WriteConfig();
   ShowLCD("Saved......",1,true);
   delay(3000);
@@ -459,7 +506,9 @@ void setup() {
   if (EEPROM.read(0)==1) ReadConfig();
   else WriteConfig();
   delay(1000);
-  PrevTime= millis();
+  Serial.begin(9600);
+  PrevDispTime= millis();
+  PrevLogTime= millis();
   LowestReading= MaxValue;
   WarningReading= MinValue;
   if (!Display) ShowStatusLCD();
@@ -469,26 +518,28 @@ void setup() {
 void loop() {
   Reading= ReadValue();
   if (Display) {
-    if ((millis()-PrevTime) > UpdTime) {
+    if ((millis()-PrevDispTime) > DispUpdTime) {
       if (Display == Value) ShowValues();
       if (Display == Bar) if (InRange()) ShowBar(map(Reading,MinValue,MaxValue,160,0));
       else ShowBar(2);
-      PrevTime= millis();
+      PrevDispTime= millis();
     }
   } 
   
- //---------------- 
+ //--------Kernel part-------- 
   if (Reading < MinValue) {
      LowReadWarning(); 
   }else if (Reading < MaxValue) {
      AudioTone= fscale(MinValue,MaxValue,HighTone,LowTone,Reading,Curve);
      NewTone(AudioPin, AudioTone);
+     if (LogMode) WriteLog(Reading);
   }else if (Reading < (MaxValue+ThresholdWindow)) {
      NewTone(AudioPin, 80);  
   }else noNewTone(AudioPin); // Turn off the tone. 
 //-----------------
 
   if (Reading < LowestReading) LowestReading= Reading; 
+  
   KeyPressed= ReadKey();
   if (KeyPressed) {  
     if (KeyPressed == Select)    Menu();
