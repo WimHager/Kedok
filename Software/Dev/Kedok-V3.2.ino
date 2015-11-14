@@ -23,8 +23,9 @@ To Do:
  ShowLCD bug. no clear
  Reset all if version updated
  Better Auto adjust
- Reverse sound pitch
- Logging??
+ Reverse Pitch
+ No need to save logmode in eeprom
+ Save Setting as structure???
  //Always Sound. Added not tested yet!!
  //Removed "Always sound" no-one liked it.
  //new inrange for bar reading
@@ -38,7 +39,7 @@ To Do:
  //More info if display readings. Sensor Min Max Lowest
  //Auto adjust auto stop if no lower reading  within 12 sec.
  //Show settings instead of Running ... if displaymode is off
-
+ //Logging
  
  V2.00 18-4-2015
  Compiled with 1.0.5
@@ -100,14 +101,31 @@ const   boolean   Disable=     true;
 const   boolean   Enable=     false;
 const   char      EmptyLine[17]=  "                ";
 
+const  byte AddrLowMinValue=             1;
+const  byte AddrHighMinValue=            2;
+const  byte AddrLowMaxValue=             3;
+const  byte AddrHighMaxValue=            4;
+const  byte AddrThresholdWindow=         5;
+const  byte AddrCurve=                   6;
+const  byte AddrPitchRev=                7;
+const  byte AddrLowAutoAdjustWindow=     8;
+const  byte AddrHighAutoAdjustWindow=    9;
+const  byte AddrLowLowTone=             10;
+const  byte AddrHighLowTone=            11;
+const  byte AddrLowHighTone=            12;
+const  byte AddrHighHighTone=           13;
+const  byte AddrLogMode=                14;
+const  byte AddrDisplay=                15;
+
 word    MinValue=                100;
 word    MaxValue=                800;
 word    LowTone=                 100; 
 word    HighTone=               1750;
-word    Curve=                     0;
+byte    Curve=                     0;
+byte    PitchRev=              false;  
 word    AutoAdjustWindow=        200;
 word    DispUpdTime=            1000; //1 sec Screen update 
-byte    Display=                   1;
+byte    Display=                   0;
 byte    ThresholdWindow=         150;
 byte    LogMode=                   0;
 byte    LogBufferStart=           20; 
@@ -282,42 +300,43 @@ void Screen(boolean Dis) {
 void ShowValues() {
   ShowLCD("Sen:"+WordToStr(Reading,4)+ " Low:"+WordToStr(LowestReading,3),0, true);
   ShowLCD("Min:"+WordToStr(MinValue,4)+" Max:"+WordToStr(MaxValue,3),1, true);
-}  
+} 
 
 void WriteConfig() {
-  EEPROM.write(1,lowByte(MinValue)); 
-  EEPROM.write(2,highByte(MinValue));
-  EEPROM.write(3,lowByte(MaxValue)); 
-  EEPROM.write(4,highByte(MaxValue));
-  EEPROM.write(5,ThresholdWindow);
-  EEPROM.write(6,lowByte(Curve));     
-  EEPROM.write(7,highByte(Curve));
-  EEPROM.write(8,lowByte(AutoAdjustWindow));     
-  EEPROM.write(9,highByte(AutoAdjustWindow));  
-  EEPROM.write(10,lowByte(LowTone));  
-  EEPROM.write(11,highByte(LowTone));
-  EEPROM.write(12,lowByte(HighTone)); 
-  EEPROM.write(13,highByte(HighTone));
-  EEPROM.write(14,LogMode);
-  EEPROM.write(15,Display);
+  EEPROM.write(AddrLowMinValue,lowByte(MinValue)); 
+  EEPROM.write(AddrHighMinValue,highByte(MinValue));
+  EEPROM.write(AddrLowMaxValue,lowByte(MaxValue)); 
+  EEPROM.write(AddrHighMaxValue,highByte(MaxValue));
+  EEPROM.write(AddrThresholdWindow,ThresholdWindow);
+  EEPROM.write(AddrCurve,Curve);     
+  EEPROM.write(AddrPitchRev,PitchRev);
+  EEPROM.write(AddrLowAutoAdjustWindow,lowByte(AutoAdjustWindow));     
+  EEPROM.write(AddrHighAutoAdjustWindow,highByte(AutoAdjustWindow));  
+  EEPROM.write(AddrLowLowTone,lowByte(LowTone));  
+  EEPROM.write(AddrHighLowTone,highByte(LowTone));
+  EEPROM.write(AddrLowHighTone,lowByte(HighTone)); 
+  EEPROM.write(AddrHighHighTone,highByte(HighTone));
+  EEPROM.write(AddrLogMode,LogMode);
+  EEPROM.write(AddrDisplay,Display);
   EEPROM.write(0,1);
 } 
 
 void ReadConfig() {
   ShowLCD("Read Config...",0, true);
-  MinValue=         word(EEPROM.read(2),EEPROM.read(1));
-  MaxValue=         word(EEPROM.read(4),EEPROM.read(3));
-  ThresholdWindow=  EEPROM.read(5);
-  Curve=            word(EEPROM.read(7),EEPROM.read(6));
-  AutoAdjustWindow= word(EEPROM.read(9),EEPROM.read(8)); 
-  LowTone=          word(EEPROM.read(11),EEPROM.read(10));
-  HighTone=         word(EEPROM.read(13),EEPROM.read(12));
-  LogMode=          EEPROM.read(14);  
-  Display=          EEPROM.read(15);
+  MinValue=         word(EEPROM.read(AddrHighMinValue),EEPROM.read(AddrLowMinValue));
+  MaxValue=         word(EEPROM.read(AddrHighMaxValue),EEPROM.read(AddrLowMaxValue));
+  ThresholdWindow=  EEPROM.read(AddrThresholdWindow);
+  Curve=            EEPROM.read(AddrCurve);
+  PitchRev=         EEPROM.read(AddrPitchRev);
+  AutoAdjustWindow= word(EEPROM.read(AddrHighAutoAdjustWindow),EEPROM.read(AddrLowAutoAdjustWindow)); 
+  LowTone=          word(EEPROM.read(AddrHighLowTone),EEPROM.read(AddrLowLowTone));
+  HighTone=         word(EEPROM.read(AddrHighHighTone),EEPROM.read(AddrLowHighTone));
+  LogMode=          EEPROM.read(AddrLogMode);  
+  Display=          EEPROM.read(AddrDisplay);
 }
 
 void EEPromClear() {
-  for (int I = 0; I < 512; I++) EEPROM.write(I, 0);
+  for (int I = 0; I < 1023; I++) EEPROM.write(I, 0);
 }
 
 void AutoAdjust() {
@@ -430,6 +449,14 @@ void Menu() {
   }
   Esc= false;   
   while (!Esc) {
+    ShowLCD("Pitch rev: "+(String)YesNoArr[PitchRev], 1, true);
+    delay(300);
+    if (KeyVal() == Down)   if (PitchRev > 0) PitchRev--;
+    if (KeyVal() == Up)     if (PitchRev < 1) PitchRev++;
+    if (KeyVal() == Select) Esc= true;
+  }
+  Esc= false;   
+  while (!Esc) {
     ShowLCD("AutoWindow: "+(String)AutoAdjustWindow, 1, true);
     delay(300);
     if (KeyVal() == Down)   if (AutoAdjustWindow > 50)   AutoAdjustWindow-= 10;
@@ -457,7 +484,7 @@ void Menu() {
   }
   Esc= false;
   noNewTone(AudioPin);
-  Display=  EEPROM.read(15); //read value from rom setting instead of global  
+  Display=  EEPROM.read(AddrDisplay); //read value from rom setting instead of global  
   while (!Esc) {
     ShowLCD("Display: "+(String)DisplayType[Display], 1, true);
     delay(300);
@@ -530,7 +557,8 @@ void loop() {
   if (Reading < MinValue) {
      LowReadWarning(); 
   }else if (Reading < MaxValue) {
-     AudioTone= fscale(MinValue,MaxValue,HighTone,LowTone,Reading,Curve);
+     if (PitchRev) AudioTone= fscale(MinValue,MaxValue,LowTone,HighTone,Reading,Curve);
+     else AudioTone= fscale(MinValue,MaxValue,HighTone,LowTone,Reading,Curve);
      NewTone(AudioPin, AudioTone);
      if (LogMode) WriteLog(Reading);
   }else if (Reading < (MaxValue+ThresholdWindow)) {
