@@ -23,9 +23,10 @@ To Do:
  ShowLCD bug. no clear
  Reset all if version updated
  Better Auto adjust
- Reverse Pitch
+ Full test of Curve parameter
  No need to save logmode in eeprom
- Save Setting as structure???
+ //Reverse Pitch
+ //Save Setting as structure???
  //Always Sound. Added not tested yet!!
  //Removed "Always sound" no-one liked it.
  //new inrange for bar reading
@@ -68,6 +69,8 @@ To Do:
  06-11-2015 New Kernel for better target card find
  06-11-2015 Removed Always sound, no-one liked it.
  14-11-2015 Added Logging.
+ 14-11-2015 Added Reverse Pitch
+ 14-11-2015 EE-Prom settings are saved as a Struct obj now
  */
 
 //Note Audio pin 3, 82 Ohm and 470N in serie
@@ -84,6 +87,19 @@ int Melody[] = {
   262, 196, 196, 220, 196, 0, 247, 262 };
 int NoteDurations[] = { 
   4, 8, 8, 4, 4, 4, 4, 4 };
+  
+ struct SettingsObj {
+  word MinValue;
+  word MaxValue;
+  byte ThresholdWindow;
+  byte Curve;
+  byte PitchRev;
+  word AutoAdjustWindow;
+  word LowTone;
+  word HighTone;
+  byte LogMode;
+  byte Display;
+};  
 
 const   char      Version[5]="3.21";
 const   char      Owner[10]=     "";
@@ -100,22 +116,6 @@ const   byte      Bar=            2;
 const   boolean   Disable=     true;
 const   boolean   Enable=     false;
 const   char      EmptyLine[17]=  "                ";
-
-const  byte AddrLowMinValue=             1;
-const  byte AddrHighMinValue=            2;
-const  byte AddrLowMaxValue=             3;
-const  byte AddrHighMaxValue=            4;
-const  byte AddrThresholdWindow=         5;
-const  byte AddrCurve=                   6;
-const  byte AddrPitchRev=                7;
-const  byte AddrLowAutoAdjustWindow=     8;
-const  byte AddrHighAutoAdjustWindow=    9;
-const  byte AddrLowLowTone=             10;
-const  byte AddrHighLowTone=            11;
-const  byte AddrLowHighTone=            12;
-const  byte AddrHighHighTone=           13;
-const  byte AddrLogMode=                14;
-const  byte AddrDisplay=                15;
 
 word    MinValue=                100;
 word    MaxValue=                800;
@@ -303,36 +303,36 @@ void ShowValues() {
 } 
 
 void WriteConfig() {
-  EEPROM.write(AddrLowMinValue,lowByte(MinValue)); 
-  EEPROM.write(AddrHighMinValue,highByte(MinValue));
-  EEPROM.write(AddrLowMaxValue,lowByte(MaxValue)); 
-  EEPROM.write(AddrHighMaxValue,highByte(MaxValue));
-  EEPROM.write(AddrThresholdWindow,ThresholdWindow);
-  EEPROM.write(AddrCurve,Curve);     
-  EEPROM.write(AddrPitchRev,PitchRev);
-  EEPROM.write(AddrLowAutoAdjustWindow,lowByte(AutoAdjustWindow));     
-  EEPROM.write(AddrHighAutoAdjustWindow,highByte(AutoAdjustWindow));  
-  EEPROM.write(AddrLowLowTone,lowByte(LowTone));  
-  EEPROM.write(AddrHighLowTone,highByte(LowTone));
-  EEPROM.write(AddrLowHighTone,lowByte(HighTone)); 
-  EEPROM.write(AddrHighHighTone,highByte(HighTone));
-  EEPROM.write(AddrLogMode,LogMode);
-  EEPROM.write(AddrDisplay,Display);
+  SettingsObj CurSettings= {
+    MinValue,
+    MaxValue,
+    ThresholdWindow,
+    Curve,
+    PitchRev,
+    AutoAdjustWindow,
+    LowTone,
+    HighTone,
+    LogMode,
+    Display
+  };  
+  EEPROM.put(1, CurSettings);
   EEPROM.write(0,1);
 } 
 
 void ReadConfig() {
   ShowLCD("Read Config...",0, true);
-  MinValue=         word(EEPROM.read(AddrHighMinValue),EEPROM.read(AddrLowMinValue));
-  MaxValue=         word(EEPROM.read(AddrHighMaxValue),EEPROM.read(AddrLowMaxValue));
-  ThresholdWindow=  EEPROM.read(AddrThresholdWindow);
-  Curve=            EEPROM.read(AddrCurve);
-  PitchRev=         EEPROM.read(AddrPitchRev);
-  AutoAdjustWindow= word(EEPROM.read(AddrHighAutoAdjustWindow),EEPROM.read(AddrLowAutoAdjustWindow)); 
-  LowTone=          word(EEPROM.read(AddrHighLowTone),EEPROM.read(AddrLowLowTone));
-  HighTone=         word(EEPROM.read(AddrHighHighTone),EEPROM.read(AddrLowHighTone));
-  LogMode=          EEPROM.read(AddrLogMode);  
-  Display=          EEPROM.read(AddrDisplay);
+  SettingsObj CurSettings;
+  EEPROM.get(1, CurSettings); //Read all settings
+  MinValue= CurSettings.MinValue;
+  MaxValue= CurSettings.MaxValue;
+  ThresholdWindow= CurSettings.ThresholdWindow;
+  Curve= CurSettings.Curve;
+  PitchRev= CurSettings.PitchRev;
+  AutoAdjustWindow= CurSettings.AutoAdjustWindow;
+  LowTone= CurSettings.LowTone;
+  HighTone= CurSettings.HighTone;
+  LogMode= CurSettings.LogMode;
+  Display= CurSettings.Display;
 }
 
 void EEPromClear() {
@@ -387,7 +387,7 @@ void AutoAdjust() {
 
 byte KeyVal() {
   word KeyVal= analogRead(0);
-  if (KeyVal > 900)  return 0; //None
+  if (KeyVal > 900)  return 0; //None     todo change code to map function
   if (KeyVal > 600)  return 1; //Select
   if (KeyVal > 400)  return 2; //Left
   if (KeyVal > 200)  return 3; //Down
@@ -484,7 +484,7 @@ void Menu() {
   }
   Esc= false;
   noNewTone(AudioPin);
-  Display=  EEPROM.read(AddrDisplay); //read value from rom setting instead of global  
+  Display=  EEPROM.read(15); //read value from rom setting instead of global  
   while (!Esc) {
     ShowLCD("Display: "+(String)DisplayType[Display], 1, true);
     delay(300);
@@ -562,7 +562,8 @@ void loop() {
      NewTone(AudioPin, AudioTone);
      if (LogMode) WriteLog(Reading);
   }else if (Reading < (MaxValue+ThresholdWindow)) {
-     NewTone(AudioPin, 80);  
+     if (PitchRev) NewTone(AudioPin, HighTone + 200);
+     else NewTone(AudioPin, LowTone-30);  
   }else noNewTone(AudioPin); // Turn off the tone. 
 //-----------------
 
