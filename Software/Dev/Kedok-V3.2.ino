@@ -24,7 +24,9 @@ To Do:
  Reset all if version updated
  Better Auto adjust
  Full test of Curve parameter
- No need to save logmode in eeprom
+ Maybe make two main loops. One for all conditions like logging and one without, to speedup the loop
+ //No need to save logmode in eeprom
+ //Logmode in display Only in No Display mode
  //Reverse Pitch
  //Save Setting as structure???
  //Always Sound. Added not tested yet!!
@@ -97,7 +99,7 @@ int NoteDurations[] = {
   word AutoAdjustWindow;
   word LowTone;
   word HighTone;
-  byte LogMode;
+  byte NotInUse;
   byte Display;
 };  
 
@@ -128,6 +130,8 @@ word    DispUpdTime=            1000; //1 sec Screen update
 byte    Display=                   0;
 byte    ThresholdWindow=         150;
 byte    LogMode=                   0;
+word    LogCounter=                0;
+byte    NotInUse=                  0; //For future use
 byte    LogBufferStart=           20; 
 word    LogUpdTime=              250; //4 times a second for 1000 values about 4 Min. logging 
 byte    ResetAll=                  0;
@@ -146,7 +150,7 @@ word    LowestReading;
 word    WarningReading;
 byte    KeyPressed;
 word    LoopCounter;
-word    LogCounter; 
+
 
 float fscale( float originalMin, float originalMax, float newBegin, float newEnd, float inputValue, float Curve){
   float   OriginalRange=    0;
@@ -246,11 +250,6 @@ void PlayMelody() {
   }
 }
 
-void ShowStatusLCD() {
-  ShowLCD("Running..",0, false);
-  ShowLCD("L:"+WordToStr(MinValue,3)+" H:"+WordToStr(MaxValue,3)+" C:"+WordToStr(Curve,2),1, true);
-}  
-
 void MoveSensorWindow(int Val) {
   MinValue= MinValue + Val;
   MaxValue= MaxValue + Val;
@@ -302,6 +301,12 @@ void ShowValues() {
   ShowLCD("Min:"+WordToStr(MinValue,4)+" Max:"+WordToStr(MaxValue,3),1, true);
 } 
 
+void ShowStatusLCD() {
+  if (LogMode) ShowLCD("Running..      *",0, false);
+  else ShowLCD("Running..",0, false);
+  ShowLCD("L:"+WordToStr(MinValue,3)+" H:"+WordToStr(MaxValue,3)+" C:"+WordToStr(Curve,2),1, true);
+}  
+
 void WriteConfig() {
   SettingsObj CurSettings= {
     MinValue,
@@ -331,7 +336,7 @@ void ReadConfig() {
   AutoAdjustWindow= CurSettings.AutoAdjustWindow;
   LowTone= CurSettings.LowTone;
   HighTone= CurSettings.HighTone;
-  LogMode= CurSettings.LogMode;
+  NotInUse= CurSettings.NotInUse;
   Display= CurSettings.Display;
 }
 
@@ -512,9 +517,8 @@ void Menu() {
     EEPROM.write(0,0); 
     Reset(); 
   }
-  if (LogMode==2) {
-    OutputLog();
-  }  
+  if (LogMode==2) OutputLog();
+  if (LogMode==1) LogCounter= 0;  
   WriteConfig();
   ShowLCD("Saved......",1,true);
   delay(3000);
