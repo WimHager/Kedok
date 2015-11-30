@@ -25,6 +25,7 @@ To Do:
  Better Auto adjust
  Full test of Curve parameter
  Maybe make two main loops. One for all conditions like logging and one without, to speedup the loop
+ //Rollback from 3v3 mod. Does not work well with LCD keypad output on A0
  //No need to save logmode in eeprom
  //Logmode in display Only in No Display mode
  //Reverse Pitch
@@ -74,9 +75,7 @@ To Do:
  14-11-2015 Added Reverse Pitch
  14-11-2015 EE-Prom settings are saved as a Struct obj now
  25-11-2015 Compiled with 1.6.5 now
- 28-11-2015 Added option to use 3.3V ref for optosensor. Enabled if data pin 0 is grounded.
-            Connect 3.3V to Aref and data pin0 to ground.
-            Maybe remove this option if all boards are modified.
+ 28-11-2015 Roll back:  Added option to use 3.3V ref for optosensor. Enabled if data pin 0 is grounded.
  */
 
 //Note Audio pin 3, 82 Ohm and 470N in serie
@@ -143,7 +142,6 @@ byte    ResetAll=                  0;
 byte    AudioPin=                  3;
 byte    SensorPin=                A1;
 word    AutoAdjustGetReadyTime= 2000; // 20 Seconds
-byte    AnalogReferenceMode=   false; //Running in 3V3 Mode              
 char    *DisplayType[]= {"None", "Value",  "Bar"};
 char    *YesNoArr[]=    {"N", "Y"};
 char    *LoggingModes[]={"Off", "On", "Play"};
@@ -404,19 +402,9 @@ void AutoAdjust() {
   if (!Display)ShowStatusLCD(); 
 } 
 
-//Select 1000
-//left 637
-//down 403
-//up 160
-//right 0
-
 byte KeyVal() {
   word KeyVal= analogRead(0);
   //ShowLCD("KeyVal: "+(String)KeyVal,0, true);
-  if (AnalogReferenceMode) {
-     if ((KeyVal != 1023) && (KeyVal != 0)) KeyVal= KeyVal * 0.9; //3.3V mode     
-  }
-  //ShowLCD("KeyVal: "+(String)KeyVal,1, true);  
   //delay(2000);
   if (KeyVal > 900)  return 0; //None     todo change code to map function
   if (KeyVal > 600)  return 1; //Select
@@ -554,7 +542,6 @@ void Menu() {
 
 void setup() {
   pinMode(A1, INPUT);
-  pinMode(0, INPUT);
   lcd.begin(16, 2);
   ShowLCD("Kedok "+(String)Version,0, true);
   ShowLCD(Owner,1, false);
@@ -569,10 +556,6 @@ void setup() {
   PrevLogTime= millis();
   LowestReading= MaxValue;
   WarningReading= MinValue;
-  AnalogReferenceMode= !digitalRead(0);
-  //ShowLCD((String)AnalogReferenceMode,0, true);
-  //delay(10000);
-  if (AnalogReferenceMode) analogReference(EXTERNAL);   
   if (!Display) ShowStatusLCD();
   PlayMelody();
 }
