@@ -77,7 +77,7 @@ To Do:
  25-11-2015 Compiled with 1.6.5 now
  28-11-2015 Roll back:  Added option to use 3.3V ref for optosensor. Enabled if data pin 0 is grounded.
  V4.00 01-01-2016 
- 01-01-2016 Adding a AD8933 DDS module
+ 01-01-2016 Adding an AD8933 DDS module
  */
 
 //Note Audio pin 3, 82 Ohm and 470N in serie
@@ -85,8 +85,11 @@ To Do:
 //Loops free running 4150 with sound 925
 
 //#define DEBUG
+//#define DDS9833
 #include <LiquidCrystal.h>
-#include <NewTone.h>
+#ifndef DDS9833
+   #include <NewTone.h>
+#endif
 #include <EEPROM.h>
 #include <LcdBarGraph.h>
 #include <SPI.h>
@@ -128,10 +131,7 @@ const   boolean   Disable=     true;
 const   boolean   Enable=     false;
 const   char      EmptyLine[17]=  "                ";
 
-const   int       SINE=      0x2000;            // Define AD9833's WaveShapes 
-const   int       SQUARE=    0x2020;                
-const   int       TRIANGLE=  0x2002;
-const   int       FSYNC=          2;            // AD9833 Chipselect Pin
+const   int       FSYNC=          2;            // AD9833 Chip select Pin
 const   float     XTALFreq=  25.0E6;            // On-board X-TAL reference frequency.
 
 word    MinValue=                100;
@@ -154,8 +154,9 @@ byte    ResetAll=                  0;
 byte    AudioPin=                  3;
 byte    SensorPin=                A1;
 word    AutoAdjustGetReadyTime= 2000; // 20 Seconds
+
 char    *DisplayType[]= {"None", "Value",  "Bar"};
-char    *WaveShapes[]= {"Sinus", "Triangle", "Square"};
+char    *WaveShapes[]=  {"Sinus", "Triangle", "Square"};
 char    *YesNoArr[]=    {"N", "Y"};
 char    *LoggingModes[]={"Off", "On", "Play"};
 
@@ -207,46 +208,60 @@ word ReadValue() {
   return analogRead(SensorPin);
 }
 
+void PlayTone(byte Pin, word Tone, word Duration) {
+   #ifdef DDS9833
+     SetFrequency(Tone);
+     if (Duration != 0) {
+       delay(Duration);
+       SetFrequency(0);
+     }
+   #else
+     if (Tone == 0) noNewTone(AudioPin);
+     else NewTone(AudioPin, Tone, Duration);
+   #endif    
+}
+
 void Beep(byte Beeps, word Tone) {
   for (byte X=0; X<Beeps; X++) {
-    NewTone(AudioPin,Tone,200);
+    PlayTone(AudioPin,Tone,200);
     delay(400);
   }
 }
 
-void AD9833reset() {
-  WriteToDDS(0x100);   // Write '1' to AD9833 Control register bit D8.
-  delay(50);
-}
+#ifdef DDS9833
+  void AD9833reset() {
+    WriteToDDS(0x100);   // Write '1' to AD9833 Control register bit D8.
+    delay(50);
+  }
 
-void SetFrequency(long Frequency) {   // Set AD8933 frequency and wave shape registers.
-  int Shape= 0x2000;                  // Sinus
-  if (WaveShape == 1) Shape= 0x2002;  // Triangle
-  if (WaveShape == 2) Shape= 0x2020;  // Square  
-  long FreqWord = (Frequency * pow(2, 28)) / XTALFreq;
-  int MSB = (int)((FreqWord & 0xFFFC000) >> 14);    //Only lower 14 bits are used for data
-  int LSB = (int)( FreqWord & 0x3FFF);
-  //Set control bits 15 ande 14 to 0 and 1, respectively, for frequency register 0
-  LSB |= 0x4000;
-  MSB |= 0x4000; 
-  WriteToDDS(1 << 13);              // B28 for 16 bits updates
-  WriteToDDS(LSB);                  // Write lower 16 bits to AD9833 registers
-  WriteToDDS(MSB);                  // Write upper 16 bits to AD9833 registers.
-  WriteToDDS(0xC000);               // Phase register
-  WriteToDDS(Shape);                // Exit & Reset to SINE, SQUARE or TRIANGLE
-}
+  void SetFrequency(long Frequency) {   // Set AD8933 frequency and wave shape registers.
+    int Shape= 0x2000;                  // Sinus
+    if (WaveShape == 1) Shape= 0x2002;  // Triangle
+    if (WaveShape == 2) Shape= 0x2020;  // Square  
+    long FreqWord = (Frequency * pow(2, 28)) / XTALFreq;
+    int MSB = (int)((FreqWord & 0xFFFC000) >> 14);    //Only lower 14 bits are used for data
+    int LSB = (int)( FreqWord & 0x3FFF);
+    //Set control bits 15 ande 14 to 0 and 1, respectively, for frequency register 0
+    LSB |= 0x4000;
+    MSB |= 0x4000; 
+    WriteToDDS(1 << 13);              // B28 for 16 bits updates
+    WriteToDDS(LSB);                  // Write lower 16 bits to AD9833 registers
+    WriteToDDS(MSB);                  // Write upper 16 bits to AD9833 registers.
+    WriteToDDS(0xC000);               // Phase register
+    WriteToDDS(Shape);                // Exit & Reset to SINE, SQUARE or TRIANGLE
+  }
 
-void WriteToDDS(int Data) {  
-  digitalWrite(FSYNC, LOW);           // Set FSYNC low before writing to AD9833 registers
-  delayMicroseconds(5);               // Give AD9833 time to get ready to receive data.
-  SPI.transfer(highByte(Data));       // Each AD9833 register is 32 bits wide and each 16
-  SPI.transfer(lowByte (Data));       // bits has to be transferred as 2 x 8-bit bytes.
-  digitalWrite(FSYNC, HIGH);          //Write done. Set FSYNC high
-}
-
+  void WriteToDDS(int Data) {  
+    digitalWrite(FSYNC, LOW);           // Set FSYNC low before writing to AD9833 registers
+    delayMicroseconds(5);               // Give AD9833 time to get ready to receive data.
+    SPI.transfer(highByte(Data));       // Each AD9833 register is 32 bits wide and each 16
+    SPI.transfer(lowByte (Data));       // bits has to be transferred as 2 x 8-bit bytes.
+    digitalWrite(FSYNC, HIGH);          //Write done. Set FSYNC high
+  }
+#endif
 
 void LowReadWarning() {
-    noNewTone(AudioPin); // Turn off the tone.
+    PlayTone(AudioPin,0,0); // Turn off the tone.
     WarningReading= Reading;
     lcd.clear();
     ShowLCD("Lower Min Value!",0,true);
@@ -296,7 +311,7 @@ void OutputLog() {
 void PlayMelody() {
   for (int ThisNote= 0; ThisNote < 8; ThisNote++) {
     int NoteDuration = 1000/NoteDurations[ThisNote];
-    NewTone(AudioPin, Melody[ThisNote], NoteDuration); // Play thisNote at full volume for noteDuration in the background.
+    PlayTone(AudioPin, Melody[ThisNote], NoteDuration); // Play thisNote at full volume for noteDuration in the background.
     delay(NoteDuration * 4 / 3); // Wait while the tone plays in the background, plus another 33% delay between notes.
   }
 }
@@ -411,7 +426,7 @@ void AutoAdjust() {
   while (TimeOutCounter < AutoAdjustGetReadyTime) {
     Reading= ReadValue();
     AudioTone= fscale(100,900,HighTone,LowTone,Reading,Curve);
-    NewTone(AudioPin, AudioTone);
+    PlayTone(AudioPin, AudioTone,0);
     TimeOutCounter++;
     delay(10);
   }
@@ -423,7 +438,7 @@ void AutoAdjust() {
   while (ReadKey() == None) {
     Reading= ReadValue();
     AudioTone= fscale(100,900,HighTone,LowTone,Reading,Curve);
-    NewTone(AudioPin, AudioTone);
+    PlayTone(AudioPin, AudioTone,0);
     if (Reading < LowestReading) {
       LowestReading= Reading;
       TimeOutCounter= 0;
@@ -476,7 +491,7 @@ byte ReadKey() {
 }  
 
 void Menu() {
-  noNewTone(AudioPin);
+  PlayTone(AudioPin,0,0);
   ShowLCD("Settings",0, true);
   boolean Esc= false;
   while (!Esc) {
@@ -511,15 +526,17 @@ void Menu() {
     if (KeyVal() == Up)     if (Curve < 5) Curve++;
     if (KeyVal() == Select) Esc= true;
   }
-  Esc= false;  
-  while (!Esc) {
-    ShowLCD("Shape: "+(String)WaveShapes[WaveShape], 1, true);
-    delay(300);
-    if (KeyVal() == Down)   if (WaveShape > 0) WaveShape--;
-    if (KeyVal() == Up)     if (WaveShape < 2) WaveShape++;
-    if (KeyVal() == Select) Esc= true;
-  }
-  Esc= false;  
+  Esc= false; 
+  #ifdef DDS9833 
+    while (!Esc) {
+      ShowLCD("Shape: "+(String)WaveShapes[WaveShape], 1, true);
+      delay(300);
+      if (KeyVal() == Down)   if (WaveShape > 0) WaveShape--;
+      if (KeyVal() == Up)     if (WaveShape < 2) WaveShape++;
+      if (KeyVal() == Select) Esc= true;
+    }
+    Esc= false; 
+  #endif 
   while (!Esc) {
     ShowLCD("Pitch rev: "+(String)YesNoArr[PitchRev], 1, true);
     delay(300);
@@ -538,24 +555,24 @@ void Menu() {
   Esc= false;
   while (!Esc) {
     ShowLCD("LowTone: "+(String)LowTone, 1, true);
-    NewTone(AudioPin, LowTone);
+    PlayTone(AudioPin, LowTone,0);
     delay(300);
     if (KeyVal() == Down)   if (LowTone > 50) LowTone-= 50;
     if (KeyVal() == Up)     if (LowTone < (HighTone-100)) LowTone+= 50;
     if (KeyVal() == Select) Esc= true;
   } 
   Esc= false; 
-  noNewTone(AudioPin);
+  PlayTone(AudioPin,0,0);
   while (!Esc) {
     ShowLCD("HighTone: "+(String)HighTone, 1, true);
-    NewTone(AudioPin, HighTone);
+    PlayTone(AudioPin, HighTone,0);
     delay(300);
     if (KeyVal() == Down)   if (HighTone > (LowTone+100)) HighTone-= 50;
     if (KeyVal() == Up)     if (HighTone < 9000) HighTone+= 50;
     if (KeyVal() == Select) Esc= true;
   }
   Esc= false;
-  noNewTone(AudioPin);
+  PlayTone(AudioPin,0,0);
   Display=  EEPROM.read(15); //read value from rom setting instead of global  
   while (!Esc) {
     ShowLCD("Display: "+(String)DisplayType[Display], 1, true);
@@ -595,13 +612,13 @@ void Menu() {
 
 void setup() {
   pinMode(A1, INPUT);
-  pinMode(FSYNC, OUTPUT); //CS for DDS module
-  SPI.begin(); //Start SPI for DDS module
-  SPI.setDataMode(SPI_MODE2);  delay(50); 
-  AD9833reset(); // Reset AD9833.
-  
-  SetFrequency(0);   // Set the frequency
-  
+  #ifdef DDS9833
+    pinMode(FSYNC, OUTPUT); //CS for DDS module
+    SPI.begin(); //Start SPI for DDS module
+    SPI.setDataMode(SPI_MODE2);  delay(50); 
+    AD9833reset();     // Reset AD9833.
+    SetFrequency(0);   // Set the frequency
+  #endif  
   lcd.begin(16, 2);
   ShowLCD("Kedok "+(String)Version,0, true);
   ShowLCD(Owner,1, false);
@@ -637,12 +654,12 @@ void loop() {
   }else if (Reading < MaxValue) {
      if (PitchRev) AudioTone= fscale(MinValue,MaxValue,LowTone,HighTone,Reading,Curve);
      else AudioTone= fscale(MinValue,MaxValue,HighTone,LowTone,Reading,Curve);
-     NewTone(AudioPin, AudioTone);
+     PlayTone(AudioPin, AudioTone,0);
      if (LogMode) WriteLog(Reading);
   }else if (Reading < (MaxValue+ThresholdWindow)) {
-     if (PitchRev) NewTone(AudioPin, HighTone + 200);
-     else NewTone(AudioPin, LowTone-30);  
-  }else noNewTone(AudioPin); // Turn off the tone. 
+     if (PitchRev) PlayTone(AudioPin, HighTone + 200,0);
+     else PlayTone(AudioPin, LowTone-30,0);  
+  }else PlayTone(AudioPin,0,0); // Turn off the tone. 
 //-----------------
 
   if (Reading < LowestReading) LowestReading= Reading; 
