@@ -24,7 +24,7 @@ To Do:
  Reset all if version updated
  Better Auto adjust
  Full test of Curve parameter
- Tons of testing for the new DDS module
+ Maybe make two main loops. One for all conditions like logging and one without, to speedup the loop
  //Rollback from 3v3 mod. Does not work well with LCD keypad output on A0
  //No need to save logmode in eeprom
  //Logmode in display Only in No Display mode
@@ -68,7 +68,7 @@ To Do:
  28-10-2015 Redo of show status screen if display is disabled.
  31-10-2015 Added Owner name, shown when booting.
  02-11-2015 Added auto set Min value with a warning by pressing 3 sec down key
- V3.2 04-11-2015
+ V3.20 04-11-2015
  06-11-2015 New Kernel for better target card find
  06-11-2015 Removed Always sound, no-one liked it.
  14-11-2015 Added Logging.
@@ -76,8 +76,8 @@ To Do:
  14-11-2015 EE-Prom settings are saved as a Struct obj now
  25-11-2015 Compiled with 1.6.5 now
  28-11-2015 Roll back:  Added option to use 3.3V ref for optosensor. Enabled if data pin 0 is grounded.
- V3.3 04-12-2015
- 04-12-2012 Added code for DDS 8950 chip as compiler option.
+ V4.00 01-01-2016 
+ 01-01-2016 Adding a AD8933 DDS module
  */
 
 //Note Audio pin 3, 82 Ohm and 470N in serie
@@ -85,16 +85,12 @@ To Do:
 //Loops free running 4150 with sound 925
 
 //#define DEBUG
-#define DDS8950
-
 #include <LiquidCrystal.h>
-#ifdef DDS8950
-  #include <DDS.h> 
-#else   
-  #include <NewTone.h>
-#endif  
+#include <NewTone.h>
 #include <EEPROM.h>
 #include <LcdBarGraph.h>
+#include <SPI.h>
+
 LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
 LcdBarGraph   lbg(&lcd, 16, 0, 0);
 int Melody[] = { 
@@ -107,6 +103,7 @@ int NoteDurations[] = {
   word MaxValue;
   byte ThresholdWindow;
   byte Curve;
+  byte WaveShape;
   byte PitchRev;
   word AutoAdjustWindow;
   word LowTone;
@@ -115,7 +112,7 @@ int NoteDurations[] = {
   byte Display;
 };  
 
-const   char      Version[5]="3.30";
+const   char      Version[5]="4.00";
 const   char      Owner[10]=     "";
 const   byte      None=           0; 
 const   byte      Select=         1;
@@ -131,19 +128,18 @@ const   boolean   Disable=     true;
 const   boolean   Enable=     false;
 const   char      EmptyLine[17]=  "                ";
 
-#ifdef DDS8950 
- const int        W_CLK=  0;       // Pin 0 - connect to AD9850 module word load clock pin (CLK)
- const int        FQ_UD=  1;       // Pin 1 - connect to freq update pin (FQ)
- const int        DATA=   2;       // Pin 2 - connect to serial data load pin (DATA)
- const int        RESET=  3;       // Pin 3 - connect to reset pin (RST).
- DDS dds(W_CLK, FQ_UD, DATA, RESET);
-#endif
-  
+const   int       SINE=      0x2000;            // Define AD9833's WaveShapes 
+const   int       SQUARE=    0x2020;                
+const   int       TRIANGLE=  0x2002;
+const   int       FSYNC=          2;            // AD9833 Chipselect Pin
+const   float     XTALFreq=  25.0E6;            // On-board X-TAL reference frequency.
+
 word    MinValue=                100;
 word    MaxValue=                800;
 word    LowTone=                 100; 
 word    HighTone=               1750;
 byte    Curve=                     0;
+byte    WaveShape=                 0;
 byte    PitchRev=              false;  
 word    AutoAdjustWindow=        200;
 word    DispUpdTime=            1000; //1 sec Screen update 
@@ -159,6 +155,7 @@ byte    AudioPin=                  3;
 byte    SensorPin=                A1;
 word    AutoAdjustGetReadyTime= 2000; // 20 Seconds
 char    *DisplayType[]= {"None", "Value",  "Bar"};
+char    *WaveShapes[]= {"Sinus", "Triangle", "Square"};
 char    *YesNoArr[]=    {"N", "Y"};
 char    *LoggingModes[]={"Off", "On", "Play"};
 
@@ -210,40 +207,46 @@ word ReadValue() {
   return analogRead(SensorPin);
 }
 
-void PlayTone(word Pitch, word Duration) {
-  #ifdef DDS8950
-     if (Duration > 0) {
-        dds.setFrequency(Pitch);
-        delay(Duration);
-        dds.setFrequency(0);
-     }else dds.setFrequency(Pitch);   
-  #else
-     if (Pitch > 0) NewTone(AudioPin, Pitch, Duration);
-     else noNewTone(AudioPin);  
-  #endif   
-}
-
 void Beep(byte Beeps, word Tone) {
   for (byte X=0; X<Beeps; X++) {
-    PlayTone(Tone,200);
+    NewTone(AudioPin,Tone,200);
     delay(400);
   }
 }
 
-void PlayMelody() {
-  for (int ThisNote= 0; ThisNote < 8; ThisNote++) {
-    int NoteDuration = 1000/NoteDurations[ThisNote];
-    #ifdef DDS8950
-      PlayTone(Melody[ThisNote]*5, NoteDuration); // Play thisNote at full volume for noteDuration in the background.
-    #else  
-      PlayTone(Melody[ThisNote], NoteDuration);
-    #endif   
-    delay(NoteDuration * 4 / 3); // Wait while the tone plays in the background, plus another 33% delay between notes.
-  }
+void AD9833reset() {
+  WriteToDDS(0x100);   // Write '1' to AD9833 Control register bit D8.
+  delay(50);
 }
 
+void SetFrequency(long Frequency) {   // Set AD8933 frequency and wave shape registers.
+  int Shape= 0x2000;                  // Sinus
+  if (WaveShape == 1) Shape= 0x2002;  // Triangle
+  if (WaveShape == 2) Shape= 0x2020;  // Square  
+  long FreqWord = (Frequency * pow(2, 28)) / XTALFreq;
+  int MSB = (int)((FreqWord & 0xFFFC000) >> 14);    //Only lower 14 bits are used for data
+  int LSB = (int)( FreqWord & 0x3FFF);
+  //Set control bits 15 ande 14 to 0 and 1, respectively, for frequency register 0
+  LSB |= 0x4000;
+  MSB |= 0x4000; 
+  WriteToDDS(1 << 13);              // B28 for 16 bits updates
+  WriteToDDS(LSB);                  // Write lower 16 bits to AD9833 registers
+  WriteToDDS(MSB);                  // Write upper 16 bits to AD9833 registers.
+  WriteToDDS(0xC000);               // Phase register
+  WriteToDDS(Shape);                // Exit & Reset to SINE, SQUARE or TRIANGLE
+}
+
+void WriteToDDS(int Data) {  
+  digitalWrite(FSYNC, LOW);           // Set FSYNC low before writing to AD9833 registers
+  delayMicroseconds(5);               // Give AD9833 time to get ready to receive data.
+  SPI.transfer(highByte(Data));       // Each AD9833 register is 32 bits wide and each 16
+  SPI.transfer(lowByte (Data));       // bits has to be transferred as 2 x 8-bit bytes.
+  digitalWrite(FSYNC, HIGH);          //Write done. Set FSYNC high
+}
+
+
 void LowReadWarning() {
-    PlayTone(0,0); // Turn off the tone.
+    noNewTone(AudioPin); // Turn off the tone.
     WarningReading= Reading;
     lcd.clear();
     ShowLCD("Lower Min Value!",0,true);
@@ -289,6 +292,14 @@ void OutputLog() {
   }
   StopLogging();
 }  
+
+void PlayMelody() {
+  for (int ThisNote= 0; ThisNote < 8; ThisNote++) {
+    int NoteDuration = 1000/NoteDurations[ThisNote];
+    NewTone(AudioPin, Melody[ThisNote], NoteDuration); // Play thisNote at full volume for noteDuration in the background.
+    delay(NoteDuration * 4 / 3); // Wait while the tone plays in the background, plus another 33% delay between notes.
+  }
+}
 
 void MoveSensorWindow(int Val) {
   MinValue= MinValue + Val;
@@ -400,7 +411,7 @@ void AutoAdjust() {
   while (TimeOutCounter < AutoAdjustGetReadyTime) {
     Reading= ReadValue();
     AudioTone= fscale(100,900,HighTone,LowTone,Reading,Curve);
-    PlayTone(AudioTone,0);
+    NewTone(AudioPin, AudioTone);
     TimeOutCounter++;
     delay(10);
   }
@@ -412,7 +423,7 @@ void AutoAdjust() {
   while (ReadKey() == None) {
     Reading= ReadValue();
     AudioTone= fscale(100,900,HighTone,LowTone,Reading,Curve);
-    PlayTone(AudioTone, 0);
+    NewTone(AudioPin, AudioTone);
     if (Reading < LowestReading) {
       LowestReading= Reading;
       TimeOutCounter= 0;
@@ -465,7 +476,7 @@ byte ReadKey() {
 }  
 
 void Menu() {
-  PlayTone(0,0); //Turn off sound
+  noNewTone(AudioPin);
   ShowLCD("Settings",0, true);
   boolean Esc= false;
   while (!Esc) {
@@ -491,7 +502,8 @@ void Menu() {
     if (KeyVal() == Up)     if (ThresholdWindow < 190) ThresholdWindow+= 10;
     if (KeyVal() == Select) Esc= true;
   }
-  Esc= false;   
+  Esc= false;  
+   
   while (!Esc) {
     ShowLCD("Curve: "+(String)Curve, 1, true);
     delay(300);
@@ -499,7 +511,15 @@ void Menu() {
     if (KeyVal() == Up)     if (Curve < 5) Curve++;
     if (KeyVal() == Select) Esc= true;
   }
-  Esc= false;   
+  Esc= false;  
+  while (!Esc) {
+    ShowLCD("Shape: "+(String)WaveShapes[WaveShape], 1, true);
+    delay(300);
+    if (KeyVal() == Down)   if (WaveShape > 0) WaveShape--;
+    if (KeyVal() == Up)     if (WaveShape < 2) WaveShape++;
+    if (KeyVal() == Select) Esc= true;
+  }
+  Esc= false;  
   while (!Esc) {
     ShowLCD("Pitch rev: "+(String)YesNoArr[PitchRev], 1, true);
     delay(300);
@@ -518,24 +538,24 @@ void Menu() {
   Esc= false;
   while (!Esc) {
     ShowLCD("LowTone: "+(String)LowTone, 1, true);
-    PlayTone(LowTone, 0);
+    NewTone(AudioPin, LowTone);
     delay(300);
     if (KeyVal() == Down)   if (LowTone > 50) LowTone-= 50;
     if (KeyVal() == Up)     if (LowTone < (HighTone-100)) LowTone+= 50;
     if (KeyVal() == Select) Esc= true;
   } 
   Esc= false; 
-  PlayTone(0,0);
+  noNewTone(AudioPin);
   while (!Esc) {
     ShowLCD("HighTone: "+(String)HighTone, 1, true);
-    PlayTone(HighTone,0);
+    NewTone(AudioPin, HighTone);
     delay(300);
     if (KeyVal() == Down)   if (HighTone > (LowTone+100)) HighTone-= 50;
     if (KeyVal() == Up)     if (HighTone < 9000) HighTone+= 50;
     if (KeyVal() == Select) Esc= true;
   }
   Esc= false;
-  PlayTone(0,0);
+  noNewTone(AudioPin);
   Display=  EEPROM.read(15); //read value from rom setting instead of global  
   while (!Esc) {
     ShowLCD("Display: "+(String)DisplayType[Display], 1, true);
@@ -575,11 +595,14 @@ void Menu() {
 
 void setup() {
   pinMode(A1, INPUT);
+  pinMode(FSYNC, OUTPUT); //CS for DDS module
+  SPI.begin(); //Start SPI for DDS module
+  SPI.setDataMode(SPI_MODE2);  delay(50); 
+  AD9833reset(); // Reset AD9833.
+  
+  SetFrequency(0);   // Set the frequency
+  
   lcd.begin(16, 2);
-  #ifdef DDS8950
-     dds.init();  
-     //dds.trim(125000000); // enter actual osc freq
-  #endif  
   ShowLCD("Kedok "+(String)Version,0, true);
   ShowLCD(Owner,1, false);
   delay(1000);
@@ -614,12 +637,12 @@ void loop() {
   }else if (Reading < MaxValue) {
      if (PitchRev) AudioTone= fscale(MinValue,MaxValue,LowTone,HighTone,Reading,Curve);
      else AudioTone= fscale(MinValue,MaxValue,HighTone,LowTone,Reading,Curve);
-     PlayTone(AudioTone, 0);
+     NewTone(AudioPin, AudioTone);
      if (LogMode) WriteLog(Reading);
   }else if (Reading < (MaxValue+ThresholdWindow)) {
-     if (PitchRev) PlayTone(HighTone + 200, 0);
-     else PlayTone(LowTone-30, 0);  
-  }else PlayTone(0,0); // Turn off the tone. 
+     if (PitchRev) NewTone(AudioPin, HighTone + 200);
+     else NewTone(AudioPin, LowTone-30);  
+  }else noNewTone(AudioPin); // Turn off the tone. 
 //-----------------
 
   if (Reading < LowestReading) LowestReading= Reading; 
@@ -634,9 +657,6 @@ void loop() {
     if (KeyPressed == DownLong)  MoveSensorWindowToLowestRead();
     if (KeyPressed == Up)        MoveSensorWindow(+10);
   }
-  #ifdef DDS8950
-    delay(20);
-  #endif  
   #ifdef DEBUG
     LoopCounter++;
   #endif  
