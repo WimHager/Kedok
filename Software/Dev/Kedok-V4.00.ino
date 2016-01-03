@@ -1,3 +1,7 @@
+#if 1
+__asm volatile ("nop");
+#endif
+
 /*
     Kedok (audio aiming device), Copyright 2015 Wim Hager
     Kedok is distributed under the terms of the GNU GPL
@@ -24,7 +28,7 @@ To Do:
  Reset all if version updated
  Better Auto adjust
  Full test of Curve parameter
- Maybe make two main loops. One for all conditions like logging and one without, to speedup the loop
+ Triangle wave still gives a beep when fequency is set to zero
  //Rollback from 3v3 mod. Does not work well with LCD keypad output on A0
  //No need to save logmode in eeprom
  //Logmode in display Only in No Display mode
@@ -82,13 +86,14 @@ To Do:
 
 //Note Audio pin 3, 82 Ohm and 470N in serie
 //Opto resistor 68K
-//Loops free running 4150 with sound 925
+//Loops free running: 4150 with sound: 925
+//Loops With DDS always: 2693 
 
-//#define DEBUG
-//#define DDS9833
+#define DEBUG
+#define DDS9833
 #include <LiquidCrystal.h>
 #ifndef DDS9833
-   #include <NewTone.h>
+  #include <NewTone.h>
 #endif
 #include <EEPROM.h>
 #include <LcdBarGraph.h>
@@ -223,8 +228,24 @@ void PlayTone(byte Pin, word Tone, word Duration) {
 
 void Beep(byte Beeps, word Tone) {
   for (byte X=0; X<Beeps; X++) {
-    PlayTone(AudioPin,Tone,200);
+    #ifdef DDS8933
+        PlayTone(AudioPin,Tone,400);
+    #else
+        PlayTone(AudioPin,Tone,200);
+    #endif        
     delay(400);
+  }
+}
+
+void PlayMelody() {
+  for (int ThisNote= 0; ThisNote < 8; ThisNote++) {
+    int NoteDuration = 1000/NoteDurations[ThisNote];
+    #ifdef DDS9833
+        PlayTone(AudioPin, Melody[ThisNote]*4, NoteDuration); // Play thisNote at full volume for noteDuration in the background.
+    #else
+        PlayTone(AudioPin, Melody[ThisNote], NoteDuration); // Play thisNote at full volume for noteDuration in the background. 
+    #endif       
+    delay(NoteDuration * 4 / 3); // Wait while the tone plays in the background, plus another 33% delay between notes.
   }
 }
 
@@ -308,14 +329,6 @@ void OutputLog() {
   StopLogging();
 }  
 
-void PlayMelody() {
-  for (int ThisNote= 0; ThisNote < 8; ThisNote++) {
-    int NoteDuration = 1000/NoteDurations[ThisNote];
-    PlayTone(AudioPin, Melody[ThisNote], NoteDuration); // Play thisNote at full volume for noteDuration in the background.
-    delay(NoteDuration * 4 / 3); // Wait while the tone plays in the background, plus another 33% delay between notes.
-  }
-}
-
 void MoveSensorWindow(int Val) {
   MinValue= MinValue + Val;
   MaxValue= MaxValue + Val;
@@ -384,6 +397,7 @@ void WriteConfig() {
     MaxValue,
     ThresholdWindow,
     Curve,
+    WaveShape,
     PitchRev,
     AutoAdjustWindow,
     LowTone,
@@ -403,6 +417,7 @@ void ReadConfig() {
   MaxValue= CurSettings.MaxValue;
   ThresholdWindow= CurSettings.ThresholdWindow;
   Curve= CurSettings.Curve;
+  WaveShape= CurSettings.WaveShape;
   PitchRev= CurSettings.PitchRev;
   AutoAdjustWindow= CurSettings.AutoAdjustWindow;
   LowTone= CurSettings.LowTone;
@@ -518,7 +533,6 @@ void Menu() {
     if (KeyVal() == Select) Esc= true;
   }
   Esc= false;  
-   
   while (!Esc) {
     ShowLCD("Curve: "+(String)Curve, 1, true);
     delay(300);
@@ -527,7 +541,8 @@ void Menu() {
     if (KeyVal() == Select) Esc= true;
   }
   Esc= false; 
-  #ifdef DDS9833 
+  
+  #ifdef DDS9833     //BUG IN HERE!!!
     while (!Esc) {
       ShowLCD("Shape: "+(String)WaveShapes[WaveShape], 1, true);
       delay(300);
@@ -537,6 +552,7 @@ void Menu() {
     }
     Esc= false; 
   #endif 
+  
   while (!Esc) {
     ShowLCD("Pitch rev: "+(String)YesNoArr[PitchRev], 1, true);
     delay(300);
