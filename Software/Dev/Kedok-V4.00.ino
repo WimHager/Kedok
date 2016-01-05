@@ -1,4 +1,4 @@
-#if 1
+#if 1                     //Needed for sketch to respect preprocessor directives
 __asm volatile ("nop");
 #endif
 
@@ -28,7 +28,9 @@ To Do:
  Reset all if version updated
  Better Auto adjust
  Full test of Curve parameter
- Triangle wave still gives a beep when fequency is set to zero
+ Triangle wave still gives a beep when fequency is set to zero,
+          Buggy at B28 Setting, needs a full test.
+ Full test if without DDS module        
  //Rollback from 3v3 mod. Does not work well with LCD keypad output on A0
  //No need to save logmode in eeprom
  //Logmode in display Only in No Display mode
@@ -141,8 +143,13 @@ const   float     XTALFreq=  25.0E6;            // On-board X-TAL reference freq
 
 word    MinValue=                100;
 word    MaxValue=                800;
-word    LowTone=                 100; 
-word    HighTone=               1750;
+#ifdef DDS9833
+  word    LowTone=               150; 
+  word    HighTone=             2000;
+#else
+  word    LowTone=               100; 
+  word    HighTone=             1750;
+#endif  
 byte    Curve=                     0;
 byte    WaveShape=                 0;
 byte    PitchRev=              false;  
@@ -161,7 +168,7 @@ byte    SensorPin=                A1;
 word    AutoAdjustGetReadyTime= 2000; // 20 Seconds
 
 char    *DisplayType[]= {"None", "Value",  "Bar"};
-char    *WaveShapes[]=  {"Sinus", "Triangle", "Square"};
+char    *WaveShapes[]=  {"Sine", "Triangle", "Square"};
 char    *YesNoArr[]=    {"N", "Y"};
 char    *LoggingModes[]={"Off", "On", "Play"};
 
@@ -241,9 +248,9 @@ void PlayMelody() {
   for (int ThisNote= 0; ThisNote < 8; ThisNote++) {
     int NoteDuration = 1000/NoteDurations[ThisNote];
     #ifdef DDS9833
-        PlayTone(AudioPin, Melody[ThisNote]*4, NoteDuration); // Play thisNote at full volume for noteDuration in the background.
+        PlayTone(AudioPin, Melody[ThisNote]*5, NoteDuration); // Play thisNote at full volume for noteDuration in the background.
     #else
-        PlayTone(AudioPin, Melody[ThisNote], NoteDuration); // Play thisNote at full volume for noteDuration in the background. 
+        PlayTone(AudioPin, Melody[ThisNote], NoteDuration);   // Play thisNote at full volume for noteDuration in the background. 
     #endif       
     delay(NoteDuration * 4 / 3); // Wait while the tone plays in the background, plus another 33% delay between notes.
   }
@@ -265,7 +272,7 @@ void PlayMelody() {
     //Set control bits 15 ande 14 to 0 and 1, respectively, for frequency register 0
     LSB |= 0x4000;
     MSB |= 0x4000; 
-    WriteToDDS(1 << 13);              // B28 for 16 bits updates
+    if (!Shape)  WriteToDDS(1 << 13); // B28 for 16 bits updates if Sinus
     WriteToDDS(LSB);                  // Write lower 16 bits to AD9833 registers
     WriteToDDS(MSB);                  // Write upper 16 bits to AD9833 registers.
     WriteToDDS(0xC000);               // Phase register
@@ -277,7 +284,7 @@ void PlayMelody() {
     delayMicroseconds(5);               // Give AD9833 time to get ready to receive data.
     SPI.transfer(highByte(Data));       // Each AD9833 register is 32 bits wide and each 16
     SPI.transfer(lowByte (Data));       // bits has to be transferred as 2 x 8-bit bytes.
-    digitalWrite(FSYNC, HIGH);          //Write done. Set FSYNC high
+    digitalWrite(FSYNC, HIGH);          // Write done. Set FSYNC high
   }
 #endif
 
@@ -636,9 +643,13 @@ void setup() {
     SetFrequency(0);   // Set the frequency
   #endif  
   lcd.begin(16, 2);
-  ShowLCD("Kedok "+(String)Version,0, true);
+  #ifdef DDS9833
+    ShowLCD("Kedok "+(String)Version+" DDS",0, true);
+  #else  
+    ShowLCD("Kedok "+(String)Version,0, true);
+  #endif  
   ShowLCD(Owner,1, false);
-  delay(1000);
+  delay(2000);
   ShowLCD("Starting...",0, true);
   delay(500);
   if (EEPROM.read(0)==1) ReadConfig();
@@ -663,7 +674,7 @@ void loop() {
       PrevDispTime= millis();
     }
   } 
-  
+
  //--------Kernel part-------- 
   if (Reading < MinValue) {
      LowReadWarning(); 
