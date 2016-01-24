@@ -91,18 +91,43 @@ To Do:
 //Loops free running: 4150 with sound: 925
 //Loops With DDS always: 2693 
 
-#define DEBUG
+//#define DEBUG
 #define DDS9833
-#include <LiquidCrystal.h>
-#ifndef DDS9833
+//#define SPEECH
+////////////////////////////////////////////
+#ifndef SPEECH
+  #include <LiquidCrystal.h>
+  #include <LcdBarGraph.h>
+#else
+  #include <SoftwareSerial.h>  
+#endif
+#ifdef DDS9833
+  #include <SPI.h>
+#else
   #include <NewTone.h>
 #endif
 #include <EEPROM.h>
-#include <LcdBarGraph.h>
-#include <SPI.h>
 
-LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
-LcdBarGraph   lbg(&lcd, 16, 0, 0);
+#ifdef SPEECH
+   #define ARDUINO_RX 11 //should connect to TX of the Serial MP3 Player module
+   #define ARDUINO_TX 12 //connect to RX of the module
+   #define CMD_SET_VOLUME 0X06
+   #define CMD_PLAY_W_INDEX 0X08
+   #define CMD_SEL_DEV 0X09
+   #define DEV_TF 0X02
+   #define CMD_PLAY 0X0D
+   #define CMD_PAUSE 0X0E
+   #define CMD_SINGLE_CYCLE 0X19
+   #define SINGLE_CYCLE_ON 0X00
+   #define SINGLE_CYCLE_OFF 0X01
+   #define CMD_PLAY_W_VOL 0X22
+   #define CMD_PLAY_FOLDER_FILE 0X0F
+   SoftwareSerial mySerial(ARDUINO_RX, ARDUINO_TX);
+#else
+   LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
+   LcdBarGraph   lbg(&lcd, 16, 0, 0);
+#endif   
+   
 int Melody[] = { 
   262, 196, 196, 220, 196, 0, 247, 262 };
 int NoteDurations[] = { 
@@ -124,22 +149,33 @@ int NoteDurations[] = {
 
 const   char      Version[5]="4.00";
 const   char      Owner[10]=     "";
-const   byte      None=           0; 
-const   byte      Select=         1;
-const   byte      Left=           2;
-const   byte      Down=           3;
-const   byte      DownLong=      13;
-const   byte      Up=             4; 
-const   byte      Right=          5;
-const   byte      RightLong=     15;
+const   char      SerialNr[23]=  "";
+#ifdef SPEECH
+  const  byte NoKey=                0;
+  const  byte Select=               1;
+  const  byte Down=                 2;
+  const  byte Up=                   3;
+  const  byte Enter=                4;
+#else
+  const   byte      None=           0; 
+  const   byte      Select=         1;
+  const   byte      Left=           2;
+  const   byte      Down=           3;
+  const   byte      DownLong=      13;
+  const   byte      Up=             4; 
+  const   byte      Right=          5;
+  const   byte      RightLong=     15;
+#endif 
 const   byte      Value=          1;
 const   byte      Bar=            2;
 const   boolean   Disable=     true;
 const   boolean   Enable=     false;
 const   char      EmptyLine[17]=  "                ";
 
-const   int       FSYNC=          2;            // AD9833 Chip select Pin
-const   float     XTALFreq=  25.0E6;            // On-board X-TAL reference frequency.
+#ifdef DDS9833
+  const   int       FSYNC=          2;            // AD9833 Chip select Pin
+  const   float     XTALFreq=  25.0E6;            // On-board X-TAL reference frequency.
+#endif  
 
 word    MinValue=                100;
 word    MaxValue=                800;
@@ -248,7 +284,7 @@ void PlayMelody() {
   for (int ThisNote= 0; ThisNote < 8; ThisNote++) {
     int NoteDuration = 1000/NoteDurations[ThisNote];
     #ifdef DDS9833
-        PlayTone(AudioPin, Melody[ThisNote]*5, NoteDuration); // Play thisNote at full volume for noteDuration in the background.
+        PlayTone(AudioPin, Melody[ThisNote]*5, NoteDuration/2); // Play thisNote at full volume for noteDuration in the background.
     #else
         PlayTone(AudioPin, Melody[ThisNote], NoteDuration);   // Play thisNote at full volume for noteDuration in the background. 
     #endif       
@@ -321,7 +357,7 @@ void StopLogging() {
 
 void WriteLog(word Value) {
   if ((millis()-PrevLogTime) > LogUpdTime) {
-    if (LogCounter < 1000) {
+    if (LogCounter < 999) {
        EEPROM.update(LogCounter+LogBufferStart, map(Value, MinValue, MaxValue, 0, 255));
        LogCounter++;
        PrevLogTime= millis();
@@ -330,7 +366,7 @@ void WriteLog(word Value) {
  }  
 
 void OutputLog() {
-  for (int C= 20; C<1000; C++) { 
+  for (int C= 20; C<999; C++) { 
     Serial.println(EEPROM.read(C));
   }
   StopLogging();
@@ -359,44 +395,96 @@ void MoveSensorWindowToLowestRead() {
   if (!Display) ShowStatusLCD();
 }  
 
-void ShowLCD(String Text, byte Line, boolean Clear) {
-  lcd.setCursor(0, Line);
-  lcd.print(EmptyLine);
-  lcd.setCursor(0, Line);
-  lcd.print(Text);
-}
-
-void ShowBar(byte Len) {
-  lcd.clear();
-  lbg.drawValue(Len, 160);
-  ShowLCD((String)map(Len,0,160,0,10),2,true);
-} 
-
-void Screen(boolean Dis) {
-  if (Dis) {
-    Display= None;
-    lcd.clear();
-    ShowStatusLCD();
+#ifndef SPEECH
+  void ShowLCD(String Text, byte Line, boolean Clear) {
+    lcd.setCursor(0, Line);
+    lcd.print(EmptyLine);
+    lcd.setCursor(0, Line);
+    lcd.print(Text);
   }
-  else Display= 1;
-  delay(500); 
-}
 
-void ShowValues() {
-  #ifdef DEBUG
-    ShowLCD("Sen:"+WordToStr(Reading,4)+ " L:"+WordToStr(LoopCounter,5),0, true);
-    LoopCounter= 0;
-  #else  
-    ShowLCD("Sen:"+WordToStr(Reading,4)+ " Low:"+WordToStr(LowestReading,3),0, true);
-  #endif  
-  ShowLCD("Min:"+WordToStr(MinValue,4)+" Max:"+WordToStr(MaxValue,3),1, true);
-} 
+  void ShowBar(byte Len) {
+    lcd.clear();
+    lbg.drawValue(Len, 160);
+    ShowLCD((String)map(Len,0,160,0,10),2,true);
+  } 
 
-void ShowStatusLCD() {
-  if (LogMode) ShowLCD("Running..      *",0, false);
-  else ShowLCD("Running..",0, false);
-  ShowLCD("L:"+WordToStr(MinValue,3)+" H:"+WordToStr(MaxValue,3)+" C:"+WordToStr(Curve,2),1, true);
-}  
+  void Screen(boolean Dis) {
+    if (Dis) {
+      Display= None;
+      lcd.clear();
+      ShowStatusLCD();
+    }
+    else Display= 1;
+    delay(500); 
+  }
+
+  void ShowValues() {
+    #ifdef DEBUG
+      ShowLCD("Sen:"+WordToStr(Reading,4)+ " L:"+WordToStr(LoopCounter,5),0, true);
+      LoopCounter= 0;
+    #else  
+      ShowLCD("Sen:"+WordToStr(Reading,4)+ " Low:"+WordToStr(LowestReading,3),0, true);
+    #endif  
+    ShowLCD("Min:"+WordToStr(MinValue,4)+" Max:"+WordToStr(MaxValue,3),1, true);
+  } 
+
+  void ShowStatusLCD() {
+    if (LogMode) ShowLCD("Running..      *",0, false);
+    else ShowLCD("Running..",0, false);
+    ShowLCD("L:"+WordToStr(MinValue,3)+" H:"+WordToStr(MaxValue,3)+" C:"+WordToStr(Curve,2),1, true);
+  } 
+#else 
+  void InitKeyPad() {
+    pinMode(Key1Pin,INPUT_PULLUP);
+    pinMode(Key2Pin,INPUT_PULLUP);
+    pinMode(Key3Pin,INPUT_PULLUP);
+    pinMode(Key4Pin,INPUT_PULLUP);
+  }
+  
+  void DelaySecIntr(word Time, boolean Intr) {
+    while (ReadKey()) Intr= Intr; //Wait till key is released
+    if (Intr) {
+       Time= Time*800;
+       for (word X=0; X<Time; X++) {
+          if (ReadKey()) X= Time;
+          delay(1);
+       }  
+    }else delay(Time); 
+  }
+
+  void SendMP3Command(int8_t Command, int16_t Data) {
+    delay(20);
+    Send_buf[0] = 0x7e; //starting byte
+    Send_buf[1] = 0xff; //version
+    Send_buf[2] = 0x06; //the number of bytes of the command without starting byte and ending byte
+    Send_buf[3] = Command; //
+    Send_buf[4] = 0x00;//0x00 = no feedback, 0x01 = feedback
+    Send_buf[5] = (int8_t)(Data >> 8);//datah
+    Send_buf[6] = (int8_t)(Data); //datal
+    Send_buf[7] = 0xef; //ending byte
+    for(uint8_t I=0; I<8; I++) mySerial.write(Send_buf[I]) ;
+  }
+
+  void SetVolume(word Vol) {
+    SendMP3Command(CMD_SET_VOLUME, 0X0000+Vol);
+  } 
+
+  void PlaySound(word Index, word Time) {
+    Serial.println("Play sound nr: "+(String)Index);
+    SendMP3Command(CMD_PLAY_FOLDER_FILE, MP3Language+Index);
+    DelaySecIntr(Time,true);
+  }
+
+  void PlayNumber(word Nr, byte Digits) {
+    PlaySound(TheValueIsMP3,2);
+    if (Digits>3) PlaySound((Nr/1000),1);
+    if (Digits>2) PlaySound(((Nr/100)%10),1);
+    if (Digits>1) PlaySound(((Nr/10)%10),1);
+    PlaySound((Nr%10),2);
+  }
+#endif
+
 
 void WriteConfig() {
   SettingsObj CurSettings= {
@@ -434,7 +522,7 @@ void ReadConfig() {
 }
 
 void EEPromClear() {
-  for (int I = 0; I < 1023; I++) EEPROM.write(I, 0);
+  for (int I = 0; I < 999; I++) EEPROM.write(I, 0); //reserve 1000 to 1023 for serial
 }
 
 void AutoAdjust() {
@@ -483,17 +571,27 @@ void AutoAdjust() {
   if (!Display)ShowStatusLCD(); 
 } 
 
-byte KeyVal() {
-  word KeyVal= analogRead(0);
-  //ShowLCD("KeyVal: "+(String)KeyVal,0, true);
-  //delay(2000);
-  if (KeyVal > 900)  return 0; //None     todo change code to map function
-  if (KeyVal > 600)  return 1; //Select
-  if (KeyVal > 400)  return 2; //Left
-  if (KeyVal > 200)  return 3; //Down
-  if (KeyVal > 80 )  return 4; //Up
-  return                    5; //Right
-}  
+#ifdef SPEECH
+  byte KeyVal() {
+    if (!digitalRead(Key1Pin)) return Select;
+    if (!digitalRead(Key2Pin)) return Up;
+    if (!digitalRead(Key3Pin)) return Down;
+    if (!digitalRead(Key4Pin)) return Enter;
+    return 0;
+  }
+#else
+  byte KeyVal() {
+    word KeyVal= analogRead(0);
+    //ShowLCD("KeyVal: "+(String)KeyVal,0, true);
+    //delay(2000);
+    if (KeyVal > 900)  return 0; //None     todo change code to map function
+    if (KeyVal > 600)  return 1; //Select
+    if (KeyVal > 400)  return 2; //Left
+    if (KeyVal > 200)  return 3; //Down
+    if (KeyVal > 80 )  return 4; //Up
+    return                    5; //Right
+  }
+#endif    
 
 byte ReadKey() {
   byte LongPressed= 0;
@@ -512,126 +610,252 @@ byte ReadKey() {
   return Key;
 }  
 
-void Menu() {
-  PlayTone(AudioPin,0,0);
-  ShowLCD("Settings",0, true);
-  boolean Esc= false;
-  while (!Esc) {
-    ShowLCD("MIN: "+(String)MinValue, 1, true);
-    if (KeyVal() == Down)   if (MinValue > 10) MinValue-= 5;
-    if (KeyVal() == Up)     if (MinValue < (MaxValue-20)) MinValue+= 5;
-    if (KeyVal() == Select) Esc= true;
-    delay(300);
-  } 
-  Esc= false; 
-  while (!Esc) {
-    ShowLCD("MAX: "+(String)MaxValue, 1, true);
-    delay(300);
-    if (KeyVal() == Down)   if (MaxValue > (MinValue+20)) MaxValue-= 5;
-    if (KeyVal() == Up)     if (MaxValue < 990) MaxValue+= 5;
-    if (KeyVal() == Select) Esc= true;
-  }
-  Esc= false; 
-  while (!Esc) {
-    ShowLCD("Threshold: "+(String)ThresholdWindow, 1, true);
-    delay(300);
-    if (KeyVal() == Down)   if (ThresholdWindow > 10)  ThresholdWindow-= 10;
-    if (KeyVal() == Up)     if (ThresholdWindow < 190) ThresholdWindow+= 10;
-    if (KeyVal() == Select) Esc= true;
-  }
-  Esc= false;  
-  while (!Esc) {
-    ShowLCD("Curve: "+(String)Curve, 1, true);
-    delay(300);
-    if (KeyVal() == Down)   if (Curve > 0) Curve--;
-    if (KeyVal() == Up)     if (Curve < 5) Curve++;
-    if (KeyVal() == Select) Esc= true;
-  }
-  Esc= false; 
-  
-  #ifdef DDS9833     //BUG IN HERE!!!
+#ifndef SPEECH
+  void Menu() {
+    PlayTone(AudioPin,0,0);
+    ShowLCD("Settings",0, true);
+    boolean Esc= false;
     while (!Esc) {
-      ShowLCD("Shape: "+(String)WaveShapes[WaveShape], 1, true);
+      ShowLCD("MIN: "+(String)MinValue, 1, true);
+      if (KeyVal() == Down)   if (MinValue > 10) MinValue-= 5;
+      if (KeyVal() == Up)     if (MinValue < (MaxValue-20)) MinValue+= 5;
+      if (KeyVal() == Select) Esc= true;
       delay(300);
-      if (KeyVal() == Down)   if (WaveShape > 0) WaveShape--;
-      if (KeyVal() == Up)     if (WaveShape < 2) WaveShape++;
+    } 
+    Esc= false; 
+    while (!Esc) {
+      ShowLCD("MAX: "+(String)MaxValue, 1, true);
+      delay(300);
+      if (KeyVal() == Down)   if (MaxValue > (MinValue+20)) MaxValue-= 5;
+      if (KeyVal() == Up)     if (MaxValue < 990) MaxValue+= 5;
       if (KeyVal() == Select) Esc= true;
     }
     Esc= false; 
-  #endif 
+    while (!Esc) {
+      ShowLCD("Threshold: "+(String)ThresholdWindow, 1, true);
+      delay(300);
+      if (KeyVal() == Down)   if (ThresholdWindow > 10)  ThresholdWindow-= 10;
+      if (KeyVal() == Up)     if (ThresholdWindow < 190) ThresholdWindow+= 10;
+      if (KeyVal() == Select) Esc= true;
+    }
+    Esc= false;  
+    while (!Esc) {
+      ShowLCD("Curve: "+(String)Curve, 1, true);
+      delay(300);
+      if (KeyVal() == Down)   if (Curve > 0) Curve--;
+      if (KeyVal() == Up)     if (Curve < 5) Curve++;
+      if (KeyVal() == Select) Esc= true;
+    }
+    Esc= false; 
   
-  while (!Esc) {
-    ShowLCD("Pitch rev: "+(String)YesNoArr[PitchRev], 1, true);
-    delay(300);
-    if (KeyVal() == Down)   if (PitchRev > 0) PitchRev--;
-    if (KeyVal() == Up)     if (PitchRev < 1) PitchRev++;
-    if (KeyVal() == Select) Esc= true;
+    #ifdef DDS9833     //BUG IN HERE!!!
+      while (!Esc) {
+        ShowLCD("Shape: "+(String)WaveShapes[WaveShape], 1, true);
+        delay(300);
+        if (KeyVal() == Down)   if (WaveShape > 0) WaveShape--;
+        if (KeyVal() == Up)     if (WaveShape < 2) WaveShape++;
+        if (KeyVal() == Select) Esc= true;
+      }
+      Esc= false; 
+    #endif 
+  
+    while (!Esc) {
+      ShowLCD("Pitch rev: "+(String)YesNoArr[PitchRev], 1, true);
+      delay(300);
+      if (KeyVal() == Down)   if (PitchRev > 0) PitchRev--;
+      if (KeyVal() == Up)     if (PitchRev < 1) PitchRev++;
+      if (KeyVal() == Select) Esc= true;
+    }
+    Esc= false;   
+    while (!Esc) {
+      ShowLCD("AutoWindow: "+(String)AutoAdjustWindow, 1, true);
+      delay(300);
+      if (KeyVal() == Down)   if (AutoAdjustWindow > 50)   AutoAdjustWindow-= 10;
+      if (KeyVal() == Up)     if (AutoAdjustWindow < 300)  AutoAdjustWindow+= 10;
+      if (KeyVal() == Select) Esc= true;
+    }  
+    Esc= false;
+    while (!Esc) {
+      ShowLCD("LowTone: "+(String)LowTone, 1, true);
+      PlayTone(AudioPin, LowTone,0);
+      delay(300);
+      if (KeyVal() == Down)   if (LowTone > 50) LowTone-= 50;
+      if (KeyVal() == Up)     if (LowTone < (HighTone-100)) LowTone+= 50;
+      if (KeyVal() == Select) Esc= true;
+    } 
+    Esc= false; 
+    PlayTone(AudioPin,0,0);
+    while (!Esc) {
+      ShowLCD("HighTone: "+(String)HighTone, 1, true);
+      PlayTone(AudioPin, HighTone,0);
+      delay(300);
+      if (KeyVal() == Down)   if (HighTone > (LowTone+100)) HighTone-= 50;
+      if (KeyVal() == Up)     if (HighTone < 9000) HighTone+= 50;
+      if (KeyVal() == Select) Esc= true;
+    }
+    Esc= false;
+    PlayTone(AudioPin,0,0);
+    Display=  EEPROM.read(15); //read value from rom setting instead of global  
+    while (!Esc) {
+      ShowLCD("Display: "+(String)DisplayType[Display], 1, true);
+      delay(300);
+      if (KeyVal() == Down)   if (Display > 0) Display--;
+      if (KeyVal() == Up)     if (Display < 2) Display++;
+      if (KeyVal() == Select) Esc= true;
+    }
+    Esc= false;
+    while (!Esc) {
+      ShowLCD("Logging: "+(String)LoggingModes[LogMode], 1, true);
+      delay(300);
+      if (KeyVal() == Down)   if (LogMode > 0) LogMode--;
+      if (KeyVal() == Up)     if (LogMode < 2) LogMode++;
+      if (KeyVal() == Select) Esc= true;
+    }
+    Esc= false;   
+    while (!Esc) {
+      ShowLCD("Reset ALL: "+(String)YesNoArr[ResetAll], 1, true);
+      delay(300); 
+      if (KeyVal() == Down)   if (ResetAll > 0) ResetAll--;
+      if (KeyVal() == Up)     if (ResetAll < 1) ResetAll++;
+      if (KeyVal() == Select) Esc= true;
+    }
+    if (ResetAll) { 
+      EEPROM.write(0,0); 
+      Reset(); 
+    }
+    if (LogMode==2) OutputLog();
+    if (LogMode==1) LogCounter= 0;  
+    WriteConfig();
+    ShowLCD("Saved......",1,true);
+    delay(3000);
+    lcd.clear();
+    if (!Display) ShowStatusLCD(); 
   }
-  Esc= false;   
-  while (!Esc) {
-    ShowLCD("AutoWindow: "+(String)AutoAdjustWindow, 1, true);
-    delay(300);
-    if (KeyVal() == Down)   if (AutoAdjustWindow > 50)   AutoAdjustWindow-= 10;
-    if (KeyVal() == Up)     if (AutoAdjustWindow < 300)  AutoAdjustWindow+= 10;
-    if (KeyVal() == Select) Esc= true;
-  }  
-  Esc= false;
-  while (!Esc) {
-    ShowLCD("LowTone: "+(String)LowTone, 1, true);
-    PlayTone(AudioPin, LowTone,0);
-    delay(300);
-    if (KeyVal() == Down)   if (LowTone > 50) LowTone-= 50;
-    if (KeyVal() == Up)     if (LowTone < (HighTone-100)) LowTone+= 50;
-    if (KeyVal() == Select) Esc= true;
+#else
+  void Menu() {
+  byte OptionNr= 0;
+  PlaySound(SettingsMenuMP3,3);
+  PlaySound(SelectTheOptionMP3,6);
+  boolean Esc= false;
+    while(!Esc) {
+      switch (OptionNr) {
+        case  0: PlaySound(SetVolumeMP3,8); break;
+        case  1: PlaySound(SetMinimalSensorValueMP3,8); break; 
+        case  2: PlaySound(SetMaximalSensorValueMP3,8); break;
+        case  3: PlaySound(SetSensorThresholdVlaueMP3,8); break;  
+        case  4: PlaySound(SetSoundCurveValueMP3,8); break;
+        case  5: PlaySound(SetPichReverseMP3,8); break;
+        case  6: PlaySound(SetAlwaysSoundMP3,8); break;    
+        case  7: PlaySound(SetLowestPitchMP3,8); break;
+        case  8: PlaySound(SetHigestPitchMP3,8); break;
+        case  9: PlaySound(SetAutoAdjustWindowMP3,8); break;
+        case 10: PlaySound(RestoreFactorySettingsMP3,8); break;                
+      } 
+      Serial.println("Option Nr: "+String(OptionNr)); 
+      if (KeyVal() == Up)       if (OptionNr < 10) OptionNr+= 1;
+      if (KeyVal() == Down)     if (OptionNr >  0) OptionNr-= 1;
+      if (KeyVal() == Enter)   Esc= true;      
+    }
+    switch(OptionNr) {
+      case 0: Esc= false;
+              while (!Esc) {
+                 PlayNumber(MP3Volume,2);
+                 if (KeyVal() == Up)       if (MP3Volume < 30) MP3Volume+= 1;
+                 if (KeyVal() == Down)     if (MP3Volume >  5) MP3Volume-= 1;
+                 if (KeyVal() == Enter)    Esc= true;
+                 SetVolume(MP3Volume);
+              }
+              break;
+      case 1: Esc= false;
+              while (!Esc) {
+                 PlayNumber(MinValue,4);
+                 if (KeyVal() == Up)       if (MinValue < (MaxValue-20)) MinValue+= 5;
+                 if (KeyVal() == Down)     if (MinValue > 10) MinValue-= 5;
+                 if (KeyVal() == Enter)    Esc= true;
+              }
+              break;
+      case 2: Esc= false;
+              while (!Esc) {
+                 PlayNumber(MaxValue,4);
+                 if (KeyVal() == Up)       if (MaxValue < 990) MaxValue+= 5;
+                 if (KeyVal() == Down)     if (MaxValue > (MinValue+20)) MaxValue-= 5;
+                 if (KeyVal() == Enter)    Esc= true;
+              }
+              break;
+      case 3: Esc= false;
+              while (!Esc) {
+                 PlayNumber(ThresholdWindow,3);
+                 if (KeyVal() == Up)       if (ThresholdWindow < 190) ThresholdWindow+= 10;
+                 if (KeyVal() == Down)     if (ThresholdWindow > 10)  ThresholdWindow-= 10;
+                 if (KeyVal() == Enter)    Esc= true;
+              }
+              break;     
+      case 4: Esc= false;
+              while (!Esc) {
+                 PlayNumber(Curve,1);
+                 if (KeyVal() == Up)       if (Curve < 5) Curve++;
+                 if (KeyVal() == Down)     if (Curve > 0) Curve--;
+                 if (KeyVal() == Enter)    Esc= true;
+              }
+              break;  
+      case 5: Esc= false;
+              while (!Esc) {
+                 if (PitchRev) PlaySound(PitchReverseEnabledMP3,3); else PlaySound(PitchReverseDisabledMP3,3); 
+                 if (KeyVal() == Up)       if (PitchRev < 1) PitchRev++;
+                 if (KeyVal() == Down)     if (PitchRev > 0) PitchRev--;
+                 if (KeyVal() == Enter)    Esc= true;
+              }
+              break;
+      case 6: Esc= false;
+              while (!Esc) {
+                 if (PitchRev) PlaySound(AlwaysSoundEnabledMP3,3); else PlaySound(AlwaysSoundDisabledMP3,3); 
+                 if (KeyVal() == Up)       if (AlwaysSound < 1) AlwaysSound++;
+                 if (KeyVal() == Down)     if (AlwaysSound > 0) AlwaysSound--;
+                 if (KeyVal() == Enter)    Esc= true;
+              }
+              break;
+      case 7: Esc= false;
+              while (!Esc) {
+                 PlayNumber(LowTone,4);
+                 if (KeyVal() == Down)   if (LowTone > 50) LowTone-= 50;
+                 if (KeyVal() == Up)     if (LowTone < (HighTone-100)) LowTone+= 50;
+                 if (KeyVal() == Select) Esc= true;
+              }
+              break;    
+      case 8: Esc= false;
+              while (!Esc) {
+                 PlayNumber(HighTone,4);
+                 if (KeyVal() == Down)   if (HighTone > (LowTone+100)) HighTone-= 50;
+                 if (KeyVal() == Up)     if (HighTone < 9000) HighTone+= 50;
+                 if (KeyVal() == Select) Esc= true;
+              }
+              break;  
+      case 9: Esc= false;
+              while (!Esc) {
+                 PlayNumber(AutoAdjustWindow,3);
+                 if (KeyVal() == Down)   if (AutoAdjustWindow > 50)   AutoAdjustWindow-= 10;
+                 if (KeyVal() == Up)     if (AutoAdjustWindow < 300)  AutoAdjustWindow+= 10;
+                 if (KeyVal() == Select) Esc= true;
+              }
+              break;  
+     case 10: Esc= false;
+              boolean SetToDefaults= false; 
+              while (!Esc) {
+                if (SetToDefaults) PlaySound(RestoreFactoryDefaultsEnabledMP3,4); else PlaySound(RestoreFactoryDefaultsDisabledMP3,4); 
+                if (KeyVal() == Up)       if (SetToDefaults < 1) SetToDefaults= true;
+                if (KeyVal() == Down)     if (SetToDefaults > 0) SetToDefaults= false;
+                if (KeyVal() == Enter)    Esc= true;
+              }
+              if (SetToDefaults) {
+                  PlaySound(AllSettingsResetToDefaultsMP3,4);
+                  //Resore factory settings
+              }
+              break;                        
+    }  
+    PlaySound(ExitOptionsMenuMP3,4);
+    //PlaySound(DataSettingsSavedMP3,3);
   } 
-  Esc= false; 
-  PlayTone(AudioPin,0,0);
-  while (!Esc) {
-    ShowLCD("HighTone: "+(String)HighTone, 1, true);
-    PlayTone(AudioPin, HighTone,0);
-    delay(300);
-    if (KeyVal() == Down)   if (HighTone > (LowTone+100)) HighTone-= 50;
-    if (KeyVal() == Up)     if (HighTone < 9000) HighTone+= 50;
-    if (KeyVal() == Select) Esc= true;
-  }
-  Esc= false;
-  PlayTone(AudioPin,0,0);
-  Display=  EEPROM.read(15); //read value from rom setting instead of global  
-  while (!Esc) {
-    ShowLCD("Display: "+(String)DisplayType[Display], 1, true);
-    delay(300);
-    if (KeyVal() == Down)   if (Display > 0) Display--;
-    if (KeyVal() == Up)     if (Display < 2) Display++;
-    if (KeyVal() == Select) Esc= true;
-  }
-  Esc= false;
-  while (!Esc) {
-    ShowLCD("Logging: "+(String)LoggingModes[LogMode], 1, true);
-    delay(300);
-    if (KeyVal() == Down)   if (LogMode > 0) LogMode--;
-    if (KeyVal() == Up)     if (LogMode < 2) LogMode++;
-    if (KeyVal() == Select) Esc= true;
-  }
-  Esc= false;   
-  while (!Esc) {
-    ShowLCD("Reset ALL: "+(String)YesNoArr[ResetAll], 1, true);
-    delay(300);
-    if (KeyVal() == Down)   if (ResetAll > 0) ResetAll--;
-    if (KeyVal() == Up)     if (ResetAll < 1) ResetAll++;
-    if (KeyVal() == Select) Esc= true;
-  }
-  if (ResetAll) { 
-    EEPROM.write(0,0); 
-    Reset(); 
-  }
-  if (LogMode==2) OutputLog();
-  if (LogMode==1) LogCounter= 0;  
-  WriteConfig();
-  ShowLCD("Saved......",1,true);
-  delay(3000);
-  lcd.clear();
-  if (!Display) ShowStatusLCD(); 
-} 
+#endif
 
 void setup() {
   pinMode(A1, INPUT);
@@ -691,7 +915,7 @@ void loop() {
 
   if (Reading < LowestReading) LowestReading= Reading; 
   
-  KeyPressed= ReadKey();
+  KeyPressed= KeyVal();
   if (KeyPressed) {  
     if (KeyPressed == Select)    Menu();
     if (KeyPressed == Right)     LowestReading= MaxValue;
