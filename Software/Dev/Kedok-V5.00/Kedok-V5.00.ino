@@ -256,7 +256,7 @@ word    MaxValue=                800;
   word    HighTone=             1750;
 #endif
 #ifdef SPEECH
-   word    MP3Language=       0X0200; //01 English 02 Dutch
+   word    MP3Language=       0X0200; //0X0100 English 0X0200 Dutch
    static int8_t     Send_buf[8]= {0}; 
 #endif
 byte    Curve=                     0;
