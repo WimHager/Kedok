@@ -3,7 +3,7 @@ __asm volatile ("nop");
 #endif
 
 /*
-    Kedok (audio aiming device), Copyright 2015 Wim Hager
+    Kedok (audio aiming device), Copyright 2016 Wim Hager
     Kedok is distributed under the terms of the GNU GPL
     
     Kedok is free software: you can redistribute it and/or modify
@@ -33,6 +33,11 @@ To Do:
  Full test if without DDS module
  Add smooth tone 
  Always Sound does not work if DDS connected.
+ Sound menu options for average and loop speed
+ //Auto calibrate does not start
+ //Option to set loop speed
+ //Add AutoAdjustGetReadyTime to menu as option
+ //Say calibratie value
  //MP3 Beep if keypressed       
  //Rollback from 3v3 mod. Does not work well with LCD keypad output on A0
  //No need to save logmode in eeprom
@@ -89,16 +94,22 @@ To Do:
  01-01-2016 Adding an AD8933 DDS module
  04-02-2016 Merged in Speech
  07-02-2016 Added Average Sensor
+ 07-04-2016 Added Sample rate
+ 09-04-2016 Added Time settings for wait time Get Ready auto adjust
  */
 
 //Note Audio pin 3 or 10. 82 Ohm and 470N in serie
 //Opto resistor 68K
-//Loops free running: 4150 with sound: 925
-//Loops With DDS always: 2693 
+//Loops DDS FAST:     1200
+//      DDS MEDIUM:    173
+//      DDS SLOW:       93
+//      TTL FAST:
+//      TTL MEDIUM:
+//      TTL SLOW:  
 
-//#define DEBUG-LCD
-//#define DDS9833
-#define SPEECH
+#define DEBUG-LCD
+#define DDS9833
+//#define SPEECH
 //#define DEBUG-SPEECH
 ////////////////////////////////////////////
 #ifdef SPEECH
@@ -183,6 +194,8 @@ To Do:
    #define LowMP3                              52
    #define AverageMP3                          53
    #define HighMP3                             54
+   #define CalibrationLevelToHighMP3           55
+   #define CalibratedAtMP3                     56
    
    #define Key1Pin                              4
    #define Key2Pin                              2
@@ -194,29 +207,20 @@ To Do:
    LcdBarGraph   lbg(&lcd, 16, 0, 0);
 #endif   
 
+#ifdef SPEECH
+  byte    AudioPin=               10;
+  byte    SensorPin=              A3;
+#else
+  byte    AudioPin=                3;
+  byte    SensorPin=              A1;
+#endif 
    
 int Melody[] = { 
   262, 196, 196, 220, 196, 0, 247, 262 };
 int NoteDurations[] = { 
   4, 8, 8, 4, 4, 4, 4, 4 };
   
- struct SettingsObj {
-  word MinValue;
-  word MaxValue;
-  byte ThresholdWindow;
-  byte Curve;
-  byte WaveShape;
-  byte PitchRev;
-  byte AlwaysSound;  
-  word AutoAdjustWindow;
-  word LowTone;
-  word HighTone;
-  byte MP3Volume;
-  byte Display;
-  byte AverageValue;
-};  
-
-const   char      Version[5]="5.00";
+const   char      Version[5]="5.01";
 const   char      Owner[10]=     "";
 const   char      SerialNr[23]=  "";
 #ifdef SPEECH
@@ -265,31 +269,44 @@ byte    PitchRev=              false;
 byte    AlwaysSound=           false;  
 word    AutoAdjustWindow=        200;
 byte    ThresholdWindow=         150;
+byte    GetReadyTime=             20; // 20 Seconds
 byte    LogMode=                   0;
 word    LogCounter=                0;
 byte    MP3Volume=                25;
 byte    LogBufferStart=           30; 
 word    LogUpdTime=              250; //4 times a second for 1000 values about 4 Min. logging 
 byte    ResetAll=                  0;
-word    AutoAdjustGetReadyTime= 2000; // 20 Seconds
-byte    AverageValue=              0; //Read 0 values to average, Default none
+byte    AverageValue=              0; //Read 0 values to average, Default none. Steps 0,5,20,85
+byte    SampleSpeed=               0; //Loop delay
 
 byte    Display=                   0;
-#ifdef SPEECH
-  byte    AudioPin=               10;
-  byte    SensorPin=              A3;
-#else
-  byte    AudioPin=                3;
-  byte    SensorPin=              A1;
-#endif 
- 
+
+struct SettingsObj {
+  word MinValue;
+  word MaxValue;
+  byte ThresholdWindow;
+  byte Curve;
+  byte WaveShape;
+  byte PitchRev;
+  byte AlwaysSound;  
+  word AutoAdjustWindow;
+  byte GetReadyTime;        //Timeout for get ready with auto adjust
+  word LowTone;
+  word HighTone;
+  byte MP3Volume;
+  byte Display;
+  byte AverageValue;
+  byte SampleSpeed;
+};  
+
 #ifndef SPEECH  
   word    DispUpdTime=            1000; //1 sec Screen update 
   char    *DisplayType[]= {"None", "Value",  "Bar"};
   char    *WaveShapes[]=  {"Sine", "Triangle", "Square"};
   char    *YesNoArr[]=    {"N", "Y"};
   char    *LoggingModes[]={"Off", "On", "Play"};
-  char    *AvgModes[]=    {"Disable", "Low", "Medium", "High"};
+  char    *AvgModes[]=    {"Disable", "Low", "Medium", "Maximal"};
+  char    *SampleModes[]= {"Fast", "Medium", "Slow"};
   long    PrevDispTime;
 #endif
 
@@ -304,6 +321,56 @@ byte    KeyPressed;
 #ifdef DEBUG
 word    LoopCounter; 
 #endif  
+
+void WriteConfig() {
+  EEPROM.write(0,1);
+  SettingsObj CurSettings= {
+    MinValue,
+    MaxValue,
+    ThresholdWindow,
+    Curve,
+    WaveShape,
+    PitchRev,
+    AlwaysSound,
+    AutoAdjustWindow,
+    GetReadyTime,
+    LowTone,
+    HighTone,
+    MP3Volume,
+    Display,
+    AverageValue,
+    SampleSpeed
+  };  
+  EEPROM.put(1, CurSettings);
+  #ifdef SPEECH
+    PlaySound(DataSettingsSavedMP3,3);
+  #endif  
+} 
+
+void ReadConfig() {
+  SettingsObj CurSettings;
+  EEPROM.get(1, CurSettings); //Read all settings
+  MinValue= CurSettings.MinValue;
+  MaxValue= CurSettings.MaxValue;
+  ThresholdWindow= CurSettings.ThresholdWindow;
+  GetReadyTime= CurSettings.GetReadyTime;
+  Curve= CurSettings.Curve;
+  WaveShape= CurSettings.WaveShape;
+  PitchRev= CurSettings.PitchRev;
+  AlwaysSound= CurSettings.AlwaysSound;
+  AutoAdjustWindow= CurSettings.AutoAdjustWindow;
+  LowTone= CurSettings.LowTone;
+  HighTone= CurSettings.HighTone;
+  MP3Volume= CurSettings.MP3Volume;
+  Display= CurSettings.Display;
+  AverageValue= CurSettings.AverageValue;
+  SampleSpeed= CurSettings.SampleSpeed;
+  #ifdef SPEECH
+     PlaySound(ReadConfigMP3,4);
+  #else   
+    ShowLCD("Read Config...",0, true);
+  #endif 
+}
 
 float fscale( float originalMin, float originalMax, float newBegin, float newEnd, float inputValue, float Curve){
   float   OriginalRange=    0;
@@ -339,21 +406,10 @@ void Reset() {
 word ReadValue(word AvgVal) { 
   if (!AverageValue) return analogRead(SensorPin); // For the sake of speed
   unsigned long ValueSum= 0;
-  AvgVal= pow(AvgVal,4);
+  AvgVal= pow(AvgVal,4)+4; //Creates avg. steps of 5, 20, 85
   for (long X=0; X<AverageValue; X++) ValueSum+= analogRead(SensorPin);
   return ValueSum/AverageValue;
 }
-
-/*
-void PlaySmoothTone(word Tone) { //Add DDS too!!!
-  static word PrevTone;
-  if (Tone) {
-    if (PrevTone < Tone) for (word X=PrevTone; X<= Tone; Tone++) NewTone(AudioPin, Tone, 10);
-    else for (word X=PrevTone; X>= Tone; Tone--) NewTone(AudioPin, Tone, 10); 
-    PrevTone= Tone;
-  }else noNewTone(AudioPin);
-}
-*/
 
 void PlayTone(word Tone, word Duration) {
    #ifdef DDS9833
@@ -518,52 +574,6 @@ void MoveSensorWindowToLowestRead() {
   #endif  
 }  
 
-void WriteConfig() {
-  SettingsObj CurSettings= {
-    MinValue,
-    MaxValue,
-    ThresholdWindow,
-    Curve,
-    WaveShape,
-    PitchRev,
-    AlwaysSound,
-    AutoAdjustWindow,
-    LowTone,
-    HighTone,
-    MP3Volume,
-    Display,
-    AverageValue
-  };  
-  EEPROM.put(1, CurSettings);
-  EEPROM.write(0,1);
-  #ifdef SPEECH
-    PlaySound(DataSettingsSavedMP3,3);
-  #endif  
-} 
-
-void ReadConfig() {
-  SettingsObj CurSettings;
-  EEPROM.get(1, CurSettings); //Read all settings
-  MinValue= CurSettings.MinValue;
-  MaxValue= CurSettings.MaxValue;
-  ThresholdWindow= CurSettings.ThresholdWindow;
-  Curve= CurSettings.Curve;
-  WaveShape= CurSettings.WaveShape;
-  PitchRev= CurSettings.PitchRev;
-  AlwaysSound= CurSettings.AlwaysSound;
-  AutoAdjustWindow= CurSettings.AutoAdjustWindow;
-  LowTone= CurSettings.LowTone;
-  HighTone= CurSettings.HighTone;
-  MP3Volume= CurSettings.MP3Volume;
-  Display= CurSettings.Display;
-  AverageValue= CurSettings.AverageValue;
-  #ifdef SPEECH
-     PlaySound(ReadConfigMP3,4);
-  #else   
-    ShowLCD("Read Config...",0, true);
-  #endif 
-}
-
 void EEPromClear() {
   for (int I = 0; I < 999; I++) EEPROM.write(I, 0); //reserve 1000 to 1023 for serial
 }
@@ -581,7 +591,7 @@ void AutoAdjust() {
     ShowLCD("Get ready.", 1, true);
     //ShowLCD((String)TimeOutCounter, 1, true);
   #endif  
-  while (TimeOutCounter < AutoAdjustGetReadyTime) {
+  while (TimeOutCounter < (GetReadyTime*90)) {
     Reading= ReadValue(0);
     AudioTone= fscale(100,900,HighTone,LowTone,Reading,Curve);
     PlayTone(AudioTone,0);
@@ -609,7 +619,7 @@ void AutoAdjust() {
     if (TimeOutCounter > 2000) break;
     delay(10);
   }
-  if (LowestReading < 820) {
+  if (LowestReading < 673) {
     Beep(3,2000);
     MinValue= LowestReading-20;
     MaxValue= MinValue+AutoAdjustWindow;
@@ -619,10 +629,20 @@ void AutoAdjust() {
     #endif  
     WriteConfig();
     delay(3000);
-  }
-  else Beep(6,100);
+  }else{
+     #ifdef SPEECH
+        PlaySound(CalibrationLevelToHighMP3,10);
+     #else
+        lcd.clear();
+        ShowLCD("Warning!!", 0, true);
+        ShowLCD("Sensor Error, ", 1, false);
+        Beep(6,100);
+     #endif 
+  }  
   #ifdef SPEECH
-     PlaySound(AutoAdjustFinishedMP3,5);
+     PlaySound(CalibratedAtMP3,5);
+     PlayNumber(MinValue);
+     PlaySound(AutoAdjustFinishedMP3,6);
      PlaySound(HaveFunShootingMP3,5);
   #else
     lcd.clear();
@@ -900,15 +920,16 @@ byte ReadKey() {
     ShowLCD("L:"+WordToStr(MinValue,3)+" H:"+WordToStr(MaxValue,3)+" C:"+WordToStr(Curve,2),1, true);
   } 
 
-  byte KeyVal() {
-    word KeyVal= analogRead(0);
-    if (KeyVal > 900)  return 0; //None     todo change code to map function
-    if (KeyVal > 600)  return 1; //Select
-    if (KeyVal > 400)  return 2; //Left
-    if (KeyVal > 200)  return 3; //Down
-    if (KeyVal > 80 )  return 4; //Up
-    return                    5; //Right
+  byte KeyVal() {                     
+    word Val= analogRead(0);
+    if (Val > 900)  return 0; //None     todo change code to map function
+    if (Val > 600)  return 1; //Select
+    if (Val > 400)  return 2; //Left
+    if (Val > 200)  return 3; //Down
+    if (Val > 80 )  return 4; //Up
+    return                 5; //Right
   }
+  
   void Menu() {
     PlayTone(0,0);
     delay(500);
@@ -939,6 +960,14 @@ byte ReadKey() {
     }
     Esc= false;  
     while (!Esc) {
+      ShowLCD("GetReadyTime: "+(String)GetReadyTime, 1, true);
+      delay(300);
+      if (KeyVal() == Down)   if (GetReadyTime > 2)    GetReadyTime--;
+      if (KeyVal() == Up)     if (GetReadyTime < 20)   GetReadyTime++;
+      if (KeyVal() == Select) Esc= true;
+    }
+    Esc= false; 
+    while (!Esc) {
       ShowLCD("Curve: "+(String)Curve, 1, true);
       delay(300);
       if (KeyVal() == Down)   if (Curve > 0) Curve--;
@@ -946,8 +975,7 @@ byte ReadKey() {
       if (KeyVal() == Select) Esc= true;
     }
     Esc= false; 
-  
-    #ifdef DDS9833     //BUG IN HERE!!!
+    #ifdef DDS9833   
       while (!Esc) {
         ShowLCD("Shape: "+(String)WaveShapes[WaveShape], 1, true);
         delay(300);
@@ -957,7 +985,6 @@ byte ReadKey() {
       }
       Esc= false; 
     #endif 
-  
     while (!Esc) {
       ShowLCD("Pitch rev: "+(String)YesNoArr[PitchRev], 1, true);
       delay(300);
@@ -1002,7 +1029,7 @@ byte ReadKey() {
     }
     Esc= false;
     PlayTone(0,0);
-    Display=  EEPROM.read(17); //read value from rom setting instead of global  
+    Display=  EEPROM.read(18); //read value from rom setting instead of global  
     while (!Esc) {
       ShowLCD("Display: "+(String)DisplayType[Display], 1, true);
       delay(300);
@@ -1011,7 +1038,6 @@ byte ReadKey() {
       if (KeyVal() == Select) Esc= true;
     }
     Esc= false;
-    
     while (!Esc) {
       ShowLCD("Average: "+(String)AvgModes[AverageValue], 1, true);
       delay(300);
@@ -1020,7 +1046,14 @@ byte ReadKey() {
       if (KeyVal() == Select) Esc= true;
     }
     Esc= false;
-   
+    while (!Esc) {
+      ShowLCD("Sampling: "+(String)SampleModes[SampleSpeed], 1, true);
+      delay(300);
+      if (KeyVal() == Down)   if (SampleSpeed > 0) SampleSpeed--;
+      if (KeyVal() == Up)     if (SampleSpeed < 2) SampleSpeed++;
+      if (KeyVal() == Select) Esc= true;
+    }
+    Esc= false;
     while (!Esc) {
       ShowLCD("Logging: "+(String)LoggingModes[LogMode], 1, true);
       delay(300);
@@ -1049,7 +1082,6 @@ byte ReadKey() {
     if (!Display) ShowStatusLCD(); 
   }
 #endif
-
 
 void setup() {
   //Pinmode for audio pin????  
@@ -1127,8 +1159,8 @@ void loop() {
 //-----------------
 
   if (Reading < LowestReading) LowestReading= Reading; 
-  KeyPressed= KeyVal();
   #ifdef SPEECH
+    KeyPressed= KeyVal();
     if (KeyPressed) {  
       if (KeyPressed == Select)    Menu();
       if (KeyPressed == Right)     AutoAdjust();
@@ -1136,9 +1168,12 @@ void loop() {
       if (KeyPressed == Up)        MoveSensorWindow(+10);
       //ToDo add more
     }
-    //delay(10);
   #else
-      if (KeyPressed) {  
+    KeyPressed= ReadKey();
+    #ifdef DEBUG-LCD
+      ShowLCD("Key: "+WordToStr(KeyPressed,4), 0, false);
+    #endif
+    if (KeyPressed) {  
       if (KeyPressed == Select)    Menu();
       if (KeyPressed == Right)     LowestReading= MaxValue;
       if (KeyPressed == RightLong) AutoAdjust();
@@ -1147,8 +1182,9 @@ void loop() {
       if (KeyPressed == DownLong)  MoveSensorWindowToLowestRead();
       if (KeyPressed == Up)        MoveSensorWindow(+10);
     }  
-  #endif  
-  #ifdef DEBUG
+  #endif
+  if (SampleSpeed) delay(SampleSpeed*5); //0,5,10  
+  #ifdef DEBUG-LCD
     LoopCounter++;
   #endif  
 }
