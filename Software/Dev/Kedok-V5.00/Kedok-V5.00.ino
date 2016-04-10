@@ -787,7 +787,7 @@ byte ReadKey() {
         case 14: PlaySound(RestoreFactorySettingsMP3,8); break;                
       } 
       //Serial.println("Option Nr: "+String(OptionNr)); 
-      if (KeyVal() == Up)       if (OptionNr < 13) OptionNr+= 1;
+      if (KeyVal() == Up)       if (OptionNr < 14) OptionNr+= 1;
       if (KeyVal() == Down)     if (OptionNr >  0) OptionNr-= 1;
       if (KeyVal() == Select)   Esc= true;      
     }
@@ -914,7 +914,7 @@ byte ReadKey() {
                  if (SampleSpeed == 2) PlaySound(SlowMP3,4);
                  if (KeyVal() == Down)   if (SampleSpeed > 0)       SampleSpeed-= 1;
                  if (KeyVal() == Up)     if (SampleSpeed < 2)       SampleSpeed+= 1;
-                 if (KeyVal() == Right)    PlaySound(HelpSetSampleSpeedMP3,10);
+                 if (KeyVal() == Right)    PlaySound(HelpSetSampleSpeedMP3,8);
                  if (KeyVal() == Select) Esc= true;
               }
               break;  
