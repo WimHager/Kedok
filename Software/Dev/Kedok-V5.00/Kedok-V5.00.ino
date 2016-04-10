@@ -31,9 +31,10 @@ To Do:
  Triangle wave still gives a beep when fequency is set to zero,
           Buggy at B28 Setting, needs a full test.
  Full test if without DDS module
- Add smooth tone 
  Always Sound does not work if DDS connected.
- Sound menu options for average and loop speed
+ Add English Help files
+ //Add smooth tone 
+ //Sound menu options for average and loop speed
  //Auto calibrate does not start
  //Option to set loop speed
  //Add AutoAdjustGetReadyTime to menu as option
@@ -96,6 +97,7 @@ To Do:
  07-02-2016 Added Average Sensor
  07-04-2016 Added Sample rate
  09-04-2016 Added Time settings for wait time Get Ready auto adjust
+ 10-04-2016 Added Dutch help files
  */
 
 //Note Audio pin 3 or 10. 82 Ohm and 470N in serie
@@ -107,9 +109,9 @@ To Do:
 //      TTL MEDIUM:
 //      TTL SLOW:  
 
-#define DEBUG-LCD
-#define DDS9833
-//#define SPEECH
+//#define DEBUG-LCD
+//#define DDS9833
+#define SPEECH
 //#define DEBUG-SPEECH
 ////////////////////////////////////////////
 #ifdef SPEECH
@@ -156,21 +158,25 @@ To Do:
    #define WelcomeMP3                          31
    #define SettingsMenuMP3                     28
    #define UseArrowKeysMP3                     30
-   #define SetMinimalSensorValueMP3            23
-   #define SetMaximalSensorValueMP3            22
-   #define SetSensorThresholdVlaueMP3          25
-   #define SetSoundCurveValueMP3               26
-   #define SetPichReverseMP3                   24
-   #define SetLowestPitchMP3                   21
-   #define SetHigestPitchMP3                   20
+   #define SetMinimalSensorValueMP3            23  
+   #define SetMaximalSensorValueMP3            22  
+   #define SetSensorThresholdVlaueMP3          25  
+   #define SetSoundCurveValueMP3               26  
+   #define SetPichReverseMP3                   24  
+   #define SetLowestPitchMP3                   21  
+   #define SetHigestPitchMP3                   20  
    #define SetAutoAdjustWindowMP3              19
+   #define SetTimeToGetReadyMP3                61 
+   #define SetSampleSpeedMP3                   59
+   #define SetVolumeMP3                        27 
+   #define SetAlwaysSoundMP3                   43
+   #define SetSensorAverageCountMP3            51         
    #define RestoreFactorySettingsMP3           18
    #define LowerMinimalSettingMP3              15
    #define PrepareWeaponForAimingMP3           17
    #define StartToAimNowMP3                    29
    #define AutoAdjustFinishedMP3               12
    #define CountDownFrom20MP3                  11
-   #define SetVolumeMP3                        27
    #define SelectTheOptionMP3                  32
    #define ExitOptionsMenuMP3                  33
    #define DataSettingsSavedMP3                34
@@ -182,7 +188,6 @@ To Do:
    #define AllSettingsResetToDefaultsMP3       40
    #define RestoreFactoryDefaultsDisabledMP3   41
    #define RestoreFactoryDefaultsEnabledMP3    42
-   #define SetAlwaysSoundMP3                   43
    #define SettingsAreSavedMP3                 44
    #define LoggingStoppedMP3                   45 
    #define AutoAdjustStartedMP3                46
@@ -190,13 +195,32 @@ To Do:
    #define HaveFunShootingMP3                  48
    #define SensorReducedMP3                    49
    #define SensorIncreasedMP3                  50 
-   #define SetSensorAverageCountMP3            51
    #define LowMP3                              52
    #define AverageMP3                          53
    #define HighMP3                             54
    #define CalibrationLevelToHighMP3           55
    #define CalibratedAtMP3                     56
-   
+   #define AutoAdjustGetReadyMP3               57
+   #define MaximalMP3                          58
+   #define FastMP3                             60
+   #define SlowMP3                             62
+   #define MediumMP3                           63
+
+   #define HelpSetMinimalSensorValueMP3       123  
+   #define HelpSetMaximalSensorValueMP3       122  
+   #define HelpSetSensorThresholdVlaueMP3     125  
+   #define HelpSetSoundCurveValueMP3          126  
+   #define HelpSetPichReverseMP3              124  
+   #define HelpSetLowestPitchMP3              121  
+   #define HelpSetHigestPitchMP3              120  
+   #define HelpSetAutoAdjustWindowMP3         119
+   #define HelpSetTimeToGetReadyMP3           161 
+   #define HelpSetSampleSpeedMP3              159
+   #define HelpSetVolumeMP3                   127 
+   #define HelpSetSensorAverageCountMP3       151  
+   #define HelpSetAlwaysSoundMP3              143  
+   #define HelpRestoreFactorySettingsMP3      118
+    
    #define Key1Pin                              4
    #define Key2Pin                              2
    #define Key3Pin                              5
@@ -756,11 +780,14 @@ byte ReadKey() {
         case  7: PlaySound(SetLowestPitchMP3,8); break;
         case  8: PlaySound(SetHigestPitchMP3,8); break;
         case  9: PlaySound(SetAutoAdjustWindowMP3,8); break;
-        case 10: PlaySound(SetSensorAverageCountMP3 ,8); break;        
-        case 11: PlaySound(RestoreFactorySettingsMP3,8); break;                
+        case 10: PlaySound(SetTimeToGetReadyMP3,8); break;
+        case 11: PlaySound(SetSensorAverageCountMP3 ,8); break;
+        case 12: PlaySound(SetSampleSpeedMP3 ,8); break;
+        case 13: PlaySound(SetSensorAverageCountMP3,8); break;          
+        case 14: PlaySound(RestoreFactorySettingsMP3,8); break;                
       } 
       //Serial.println("Option Nr: "+String(OptionNr)); 
-      if (KeyVal() == Up)       if (OptionNr < 11) OptionNr+= 1;
+      if (KeyVal() == Up)       if (OptionNr < 13) OptionNr+= 1;
       if (KeyVal() == Down)     if (OptionNr >  0) OptionNr-= 1;
       if (KeyVal() == Select)   Esc= true;      
     }
@@ -771,6 +798,7 @@ byte ReadKey() {
                  PlayNumber(MP3Volume);
                  if (KeyVal() == Up)       if (MP3Volume < 30) MP3Volume+= 1;
                  if (KeyVal() == Down)     if (MP3Volume >  5) MP3Volume-= 1;
+                 if (KeyVal() == Right)    PlaySound(HelpSetVolumeMP3,8);
                  if (KeyVal() == Select)   Esc= true;
                  SetVolume(MP3Volume);
               }
@@ -780,7 +808,8 @@ byte ReadKey() {
                  PlayNumber(MinValue);
                  if (KeyVal() == Up)       if (MinValue < (MaxValue-20)) MinValue+= 5;
                  if (KeyVal() == Down)     if (MinValue > 10) MinValue-= 5;
-                 if (KeyVal() == Select)    Esc= true;
+                 if (KeyVal() == Right)    PlaySound(HelpSetMinimalSensorValueMP3,8);
+                 if (KeyVal() == Select)   Esc= true;
               }
               break;
       case 2: Esc= false;
@@ -788,6 +817,7 @@ byte ReadKey() {
                  PlayNumber(MaxValue);
                  if (KeyVal() == Up)       if (MaxValue < 990) MaxValue+= 5;
                  if (KeyVal() == Down)     if (MaxValue > (MinValue+20)) MaxValue-= 5;
+                 if (KeyVal() == Right)    PlaySound(HelpSetMaximalSensorValueMP3,8);
                  if (KeyVal() == Select)    Esc= true;
               }
               break;
@@ -796,6 +826,7 @@ byte ReadKey() {
                  PlayNumber(ThresholdWindow);
                  if (KeyVal() == Up)       if (ThresholdWindow < 190) ThresholdWindow+= 10;
                  if (KeyVal() == Down)     if (ThresholdWindow > 10)  ThresholdWindow-= 10;
+                 if (KeyVal() == Right)    PlaySound(HelpSetSensorThresholdVlaueMP3,10);
                  if (KeyVal() == Select)   Esc= true;
               }
               break;     
@@ -804,6 +835,7 @@ byte ReadKey() {
                  PlayNumber(Curve);
                  if (KeyVal() == Up)       if (Curve < 5) Curve++;
                  if (KeyVal() == Down)     if (Curve > 0) Curve--;
+                 if (KeyVal() == Right)    PlaySound(HelpSetSoundCurveValueMP3,10);
                  if (KeyVal() == Select)   Esc= true;
               }
               break;  
@@ -812,6 +844,7 @@ byte ReadKey() {
                  if (PitchRev) PlaySound(PitchReverseEnabledMP3,3); else PlaySound(PitchReverseDisabledMP3,3); 
                  if (KeyVal() == Up)       if (PitchRev < 1) PitchRev++;
                  if (KeyVal() == Down)     if (PitchRev > 0) PitchRev--;
+                 if (KeyVal() == Right)    PlaySound(HelpSetPichReverseMP3,10);
                  if (KeyVal() == Select)   Esc= true;
               }
               break;
@@ -820,6 +853,7 @@ byte ReadKey() {
                  if (AlwaysSound) PlaySound(AlwaysSoundEnabledMP3,3); else PlaySound(AlwaysSoundDisabledMP3,3); 
                  if (KeyVal() == Up)       if (AlwaysSound < 1) AlwaysSound++;
                  if (KeyVal() == Down)     if (AlwaysSound > 0) AlwaysSound--;
+                 if (KeyVal() == Right)    PlaySound(HelpSetAlwaysSoundMP3,10);
                  if (KeyVal() == Select)   Esc= true;
               }
               break;
@@ -829,6 +863,7 @@ byte ReadKey() {
                  delay(300);
                  if (KeyVal() == Down)   if (LowTone > 50) LowTone-= 50;
                  if (KeyVal() == Up)     if (LowTone < (HighTone-100)) LowTone+= 50;
+                 if (KeyVal() == Right)    PlaySound(HelpSetLowestPitchMP3,10);
                  if (KeyVal() == Select) Esc= true;
               }
               break;    
@@ -838,6 +873,7 @@ byte ReadKey() {
                  delay(300);
                  if (KeyVal() == Down)   if (HighTone > (LowTone+100)) HighTone-= 50;
                  if (KeyVal() == Up)     if (HighTone < 9000) HighTone+= 50;
+                 if (KeyVal() == Right)    PlaySound(HelpSetHigestPitchMP3,10);
                  if (KeyVal() == Select) Esc= true;
               }
               break;  
@@ -846,26 +882,49 @@ byte ReadKey() {
                  PlayNumber(AutoAdjustWindow);
                  if (KeyVal() == Down)   if (AutoAdjustWindow > 50)   AutoAdjustWindow-= 10;
                  if (KeyVal() == Up)     if (AutoAdjustWindow < 300)  AutoAdjustWindow+= 10;
+                 if (KeyVal() == Right)    PlaySound(HelpSetAutoAdjustWindowMP3,10);
                  if (KeyVal() == Select) Esc= true;
               }
               break;
-     case 10: Esc= false;
+      case 10: Esc= false;
               while (!Esc) {
-                 if (AverageValue == 0) PlaySound(DisableMP3,4);
+                 PlayNumber(GetReadyTime);
+                 if (KeyVal() == Down)   if (GetReadyTime > 2)       GetReadyTime-= 1;
+                 if (KeyVal() == Up)     if (GetReadyTime < 20)      GetReadyTime+= 1;
+                 if (KeyVal() == Right)    PlaySound(HelpSetTimeToGetReadyMP3,10);
+                 if (KeyVal() == Select) Esc= true;
+              }
+              break;             
+     case 11: Esc= false;
+              while (!Esc) {
+                 if (AverageValue == 0) PlaySound(DisableMP3,4); //beter uitleg? disabled als niet actief?
                  if (AverageValue == 1) PlaySound(LowMP3,4);
-                 if (AverageValue == 2) PlaySound(AverageMP3,4); 
+                 if (AverageValue == 2) PlaySound(MediumMP3,4); 
                  if (AverageValue == 3) PlaySound(HighMP3,4);
                  if (KeyVal() == Down)   if (AverageValue > 0)       AverageValue-= 1;
                  if (KeyVal() == Up)     if (AverageValue < 3)       AverageValue+= 1;
+                 if (KeyVal() == Right)    PlaySound(HelpSetSensorAverageCountMP3,10);
                  if (KeyVal() == Select) Esc= true;
               }
               break;
-     case 11: Esc= false;
+     case 12: Esc= false;
+              while (!Esc) {
+                 if (SampleSpeed == 0) PlaySound(FastMP3,4);
+                 if (SampleSpeed == 1) PlaySound(MediumMP3,4); 
+                 if (SampleSpeed == 2) PlaySound(SlowMP3,4);
+                 if (KeyVal() == Down)   if (AverageValue > 0)       SampleSpeed-= 1;
+                 if (KeyVal() == Up)     if (AverageValue < 2)       SampleSpeed+= 1;
+                 if (KeyVal() == Right)    PlaySound(HelpSetSampleSpeedMP3,10);
+                 if (KeyVal() == Select) Esc= true;
+              }
+              break;  
+     case 13: Esc= false;
               boolean SetToDefaults= false; 
               while (!Esc) {
                 if (SetToDefaults) PlaySound(RestoreFactoryDefaultsEnabledMP3,4); else PlaySound(RestoreFactoryDefaultsDisabledMP3,4); 
                 if (KeyVal() == Up)       if (SetToDefaults < 1) SetToDefaults= true;
                 if (KeyVal() == Down)     if (SetToDefaults > 0) SetToDefaults= false;
+                if (KeyVal() == Right)    PlaySound(HelpRestoreFactorySettingsMP3,10);
                 if (KeyVal() == Select)   Esc= true;
               }
               if (SetToDefaults) {
@@ -1170,9 +1229,6 @@ void loop() {
     }
   #else
     KeyPressed= ReadKey();
-    #ifdef DEBUG-LCD
-      ShowLCD("Key: "+WordToStr(KeyPressed,4), 0, false);
-    #endif
     if (KeyPressed) {  
       if (KeyPressed == Select)    Menu();
       if (KeyPressed == Right)     LowestReading= MaxValue;
