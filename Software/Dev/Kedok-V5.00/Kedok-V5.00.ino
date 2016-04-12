@@ -11,6 +11,10 @@ __asm volatile ("nop");
 const   char      Version[5]="5.01";
 const   char      Owner[10]=     "";
 const   char      SerialNr[23]=  "";
+
+#ifdef SPEECH
+   word    MP3Language=       0X0200; //0X0100 English 0X0200 Dutch
+#endif
 //=================================================================================================================
 
 /*
@@ -212,6 +216,7 @@ To Do:
    #define FastMP3                             60
    #define SlowMP3                             62
    #define MediumMP3                           63
+   #define SlowestMP3                          64
 
    #define HelpSetMinimalSensorValueMP3       123  
    #define HelpSetMaximalSensorValueMP3       122  
@@ -233,6 +238,7 @@ To Do:
    #define Key3Pin                              5
    #define Key4Pin                              3
    SoftwareSerial mySerial(ARDUINO_RX, ARDUINO_TX);
+   static int8_t     Send_buf[8]= {0};
 #else
    LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
    LcdBarGraph   lbg(&lcd, 16, 0, 0);
@@ -287,10 +293,7 @@ word    MaxValue=                800;
   word    LowTone=               100; 
   word    HighTone=             1750;
 #endif
-#ifdef SPEECH
-   word    MP3Language=       0X0200; //0X0100 English 0X0200 Dutch
-   static int8_t     Send_buf[8]= {0}; 
-#endif
+
 byte    Curve=                     0;
 byte    WaveShape=                 0;
 byte    PitchRev=              false;
@@ -338,7 +341,7 @@ struct SettingsObj {
   char    *YesNoArr[]=    {"N", "Y"};
   char    *LoggingModes[]={"Off", "On", "Play"};
   char    *AvgModes[]=    {"Disable", "Low", "Medium", "Maximal"};
-  char    *SampleModes[]= {"Fast", "Medium", "Slow", "Tardy"};
+  char    *SampleModes[]= {"Fast", "Medium", "Slow", "Slowest"};
   long    PrevDispTime;
 #endif
 
@@ -503,11 +506,11 @@ void PlayMelody() {
   }
 
   void WriteToDDS(int Data) {  
-    digitalWrite(FSyncPin, LOW);           // Set FSyncPinPin low before writing to AD9833 registers
+    digitalWrite(FSyncPin, LOW);        // Set FSyncPinPin low before writing to AD9833 registers
     delayMicroseconds(5);               // Give AD9833 time to get ready to receive data.
     SPI.transfer(highByte(Data));       // Each AD9833 register is 32 bits wide and each 16
     SPI.transfer(lowByte (Data));       // bits has to be transferred as 2 x 8-bit bytes.
-    digitalWrite(FSyncPin, HIGH);          // Write done. Set FSyncPinPin high
+    digitalWrite(FSyncPin, HIGH);       // Write done. Set FSyncPinPin high
   }
 #endif
 
@@ -936,9 +939,10 @@ byte ReadKey() {
               break;
      case 12: Esc= false;
               while (!Esc) {
-                 if (SampleSpeed == 0) PlaySound(FastMP3,4);
-                 if (SampleSpeed == 1) PlaySound(MediumMP3,4); 
-                 if (SampleSpeed == 2) PlaySound(SlowMP3,4);
+                 if (SampleSpeed == 0)   PlaySound(FastMP3,4);
+                 if (SampleSpeed == 1)   PlaySound(MediumMP3,4); 
+                 if (SampleSpeed == 2)   PlaySound(SlowMP3,4);
+                 if (SampleSpeed == 3)   PlaySound(SlowestMP3,4);
                  if (KeyVal() == Down)   if (SampleSpeed > 0)       SampleSpeed-= 1;
                  if (KeyVal() == Up)     if (SampleSpeed < 2)       SampleSpeed+= 1;
                  if (KeyVal() == Right)  PlayHelp(OptionNr); 
@@ -1136,7 +1140,7 @@ byte ReadKey() {
       ShowLCD("Sampling: "+(String)SampleModes[SampleSpeed], 1, true);
       delay(300);
       if (KeyVal() == Down)   if (SampleSpeed > 0) SampleSpeed--;
-      if (KeyVal() == Up)     if (SampleSpeed < 2) SampleSpeed++;
+      if (KeyVal() == Up)     if (SampleSpeed < 3) SampleSpeed++;
       if (KeyVal() == Select) Esc= true;
     }
     Esc= false;
