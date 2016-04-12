@@ -944,7 +944,7 @@ byte ReadKey() {
                  if (SampleSpeed == 2)   PlaySound(SlowMP3,4);
                  if (SampleSpeed == 3)   PlaySound(SlowestMP3,4);
                  if (KeyVal() == Down)   if (SampleSpeed > 0)       SampleSpeed-= 1;
-                 if (KeyVal() == Up)     if (SampleSpeed < 2)       SampleSpeed+= 1;
+                 if (KeyVal() == Up)     if (SampleSpeed < 3)       SampleSpeed+= 1;
                  if (KeyVal() == Right)  PlayHelp(OptionNr); 
                  if (KeyVal() == Select) Esc= true;
               }
