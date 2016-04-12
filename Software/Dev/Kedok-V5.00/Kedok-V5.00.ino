@@ -2,6 +2,17 @@
 __asm volatile ("nop");
 #endif
 
+//====================================Compiler options=============================================================
+//#define DEBUG-LCD       //Show Debug on LCD screen. Enables debug info on LCD screen, only with LCD 
+//#define DDS9833         //Enable for a Kedok version with a DDS module. Disable for TTL output 
+#define SPEECH        //Enable if you compile a Kedok speech version. Disable for LCD
+//#define DEBUG-SPEECH  //Give debug info if you compile a Kedok speech version
+
+const   char      Version[5]="5.01";
+const   char      Owner[10]=     "";
+const   char      SerialNr[23]=  "";
+//=================================================================================================================
+
 /*
     Kedok (audio aiming device), Copyright 2016 Wim Hager
     Kedok is distributed under the terms of the GNU GPL
@@ -109,10 +120,6 @@ To Do:
 //      TTL MEDIUM:
 //      TTL SLOW:  
 
-//#define DEBUG-LCD
-//#define DDS9833
-#define SPEECH
-//#define DEBUG-SPEECH
 ////////////////////////////////////////////
 #ifdef SPEECH
   #include <SoftwareSerial.h>
@@ -208,7 +215,7 @@ To Do:
 
    #define HelpSetMinimalSensorValueMP3       123  
    #define HelpSetMaximalSensorValueMP3       122  
-   #define HelpSetSensorThresholdVlaueMP3     125  
+   #define HelpSetSensorThresholdValueMP3     125  
    #define HelpSetSoundCurveValueMP3          126  
    #define HelpSetPichReverseMP3              124  
    #define HelpSetLowestPitchMP3              121  
@@ -244,9 +251,6 @@ int Melody[] = {
 int NoteDurations[] = { 
   4, 8, 8, 4, 4, 4, 4, 4 };
   
-const   char      Version[5]="5.01";
-const   char      Owner[10]=     "";
-const   char      SerialNr[23]=  "";
 #ifdef SPEECH
   const  byte None=                 0;
   const  byte Select=               1;
@@ -290,9 +294,13 @@ word    MaxValue=                800;
 byte    Curve=                     0;
 byte    WaveShape=                 0;
 byte    PitchRev=              false;
-byte    AlwaysSound=           false;  
-word    AutoAdjustWindow=        200;
-byte    ThresholdWindow=         150;
+#ifdef SPEECH
+  byte    AlwaysSound=          true; 
+#else
+  byte    AlwaysSound=         false; 
+#endif  
+word    AutoAdjustWindow=        200; // Normal card size
+byte    ThresholdWindow=         150; 
 byte    GetReadyTime=             20; // 20 Seconds
 byte    LogMode=                   0;
 word    LogCounter=                0;
@@ -330,7 +338,7 @@ struct SettingsObj {
   char    *YesNoArr[]=    {"N", "Y"};
   char    *LoggingModes[]={"Off", "On", "Play"};
   char    *AvgModes[]=    {"Disable", "Low", "Medium", "Maximal"};
-  char    *SampleModes[]= {"Fast", "Medium", "Slow"};
+  char    *SampleModes[]= {"Fast", "Medium", "Slow", "Tardy"};
   long    PrevDispTime;
 #endif
 
@@ -754,6 +762,25 @@ byte ReadKey() {
     PlaySound((Nr%10),5);
   }
 
+  void PlayHelp(byte Option) {
+    switch(Option) {
+      case  0: PlaySound(HelpSetVolumeMP3,8); break;
+      case  1: PlaySound(HelpSetMinimalSensorValueMP3,13); break;
+      case  2: PlaySound(HelpSetMaximalSensorValueMP3,13); break; 
+      case  3: PlaySound(HelpSetSensorThresholdValueMP3,10); break;
+      case  4: PlaySound(HelpSetSoundCurveValueMP3,11); break;
+      case  5: PlaySound(HelpSetPichReverseMP3,9); break;
+      case  6: PlaySound(HelpSetAlwaysSoundMP3,8); break;
+      case  7: PlaySound(HelpSetLowestPitchMP3,7); break;  
+      case  8: PlaySound(HelpSetHigestPitchMP3,7); break;
+      case  9: PlaySound(HelpSetAutoAdjustWindowMP3,11); break;
+      case 10: PlaySound(HelpSetTimeToGetReadyMP3,10); break;
+      case 11: PlaySound(HelpSetSensorAverageCountMP3 ,9); break;
+      case 12: PlaySound(HelpSetSampleSpeedMP3 ,8); break;
+      case 13: PlaySound(HelpRestoreFactorySettingsMP3,8); break;
+    }  
+  }
+
   byte KeyVal() {
     if (!digitalRead(Key1Pin)) {PlayTone(1000,20); return Select;}
     if (!digitalRead(Key2Pin)) {PlayTone(1000,20); return Down;}
@@ -783,13 +810,13 @@ byte ReadKey() {
         case 10: PlaySound(SetTimeToGetReadyMP3,8); break;
         case 11: PlaySound(SetSensorAverageCountMP3 ,8); break;
         case 12: PlaySound(SetSampleSpeedMP3 ,8); break;
-        case 13: PlaySound(SetSensorAverageCountMP3,8); break;          
-        case 14: PlaySound(RestoreFactorySettingsMP3,8); break;                
+        case 13: PlaySound(RestoreFactorySettingsMP3,8); break;                
       } 
       //Serial.println("Option Nr: "+String(OptionNr)); 
-      if (KeyVal() == Up)       if (OptionNr < 14) OptionNr+= 1;
+      if (KeyVal() == Up)       if (OptionNr < 13) OptionNr+= 1;
       if (KeyVal() == Down)     if (OptionNr >  0) OptionNr-= 1;
-      if (KeyVal() == Select)   Esc= true;      
+      if (KeyVal() == Select)   Esc= true; 
+      if (KeyVal() == Right)    PlayHelp(OptionNr);     
     }
     PlaySound(UseArrowKeysMP3,6);
     switch(OptionNr) {
@@ -798,7 +825,7 @@ byte ReadKey() {
                  PlayNumber(MP3Volume);
                  if (KeyVal() == Up)       if (MP3Volume < 30) MP3Volume+= 1;
                  if (KeyVal() == Down)     if (MP3Volume >  5) MP3Volume-= 1;
-                 if (KeyVal() == Right)    PlaySound(HelpSetVolumeMP3,8);
+                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
                  if (KeyVal() == Select)   Esc= true;
                  SetVolume(MP3Volume);
               }
@@ -808,7 +835,7 @@ byte ReadKey() {
                  PlayNumber(MinValue);
                  if (KeyVal() == Up)       if (MinValue < (MaxValue-20)) MinValue+= 5;
                  if (KeyVal() == Down)     if (MinValue > 10) MinValue-= 5;
-                 if (KeyVal() == Right)    PlaySound(HelpSetMinimalSensorValueMP3,8);
+                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
                  if (KeyVal() == Select)   Esc= true;
               }
               break;
@@ -817,8 +844,8 @@ byte ReadKey() {
                  PlayNumber(MaxValue);
                  if (KeyVal() == Up)       if (MaxValue < 990) MaxValue+= 5;
                  if (KeyVal() == Down)     if (MaxValue > (MinValue+20)) MaxValue-= 5;
-                 if (KeyVal() == Right)    PlaySound(HelpSetMaximalSensorValueMP3,8);
-                 if (KeyVal() == Select)    Esc= true;
+                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
+                 if (KeyVal() == Select)   Esc= true;
               }
               break;
       case 3: Esc= false;
@@ -826,7 +853,7 @@ byte ReadKey() {
                  PlayNumber(ThresholdWindow);
                  if (KeyVal() == Up)       if (ThresholdWindow < 190) ThresholdWindow+= 10;
                  if (KeyVal() == Down)     if (ThresholdWindow > 10)  ThresholdWindow-= 10;
-                 if (KeyVal() == Right)    PlaySound(HelpSetSensorThresholdVlaueMP3,10);
+                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
                  if (KeyVal() == Select)   Esc= true;
               }
               break;     
@@ -835,7 +862,7 @@ byte ReadKey() {
                  PlayNumber(Curve);
                  if (KeyVal() == Up)       if (Curve < 5) Curve++;
                  if (KeyVal() == Down)     if (Curve > 0) Curve--;
-                 if (KeyVal() == Right)    PlaySound(HelpSetSoundCurveValueMP3,10);
+                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
                  if (KeyVal() == Select)   Esc= true;
               }
               break;  
@@ -844,7 +871,7 @@ byte ReadKey() {
                  if (PitchRev) PlaySound(PitchReverseEnabledMP3,3); else PlaySound(PitchReverseDisabledMP3,3); 
                  if (KeyVal() == Up)       if (PitchRev < 1) PitchRev++;
                  if (KeyVal() == Down)     if (PitchRev > 0) PitchRev--;
-                 if (KeyVal() == Right)    PlaySound(HelpSetPichReverseMP3,10);
+                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
                  if (KeyVal() == Select)   Esc= true;
               }
               break;
@@ -853,7 +880,7 @@ byte ReadKey() {
                  if (AlwaysSound) PlaySound(AlwaysSoundEnabledMP3,3); else PlaySound(AlwaysSoundDisabledMP3,3); 
                  if (KeyVal() == Up)       if (AlwaysSound < 1) AlwaysSound++;
                  if (KeyVal() == Down)     if (AlwaysSound > 0) AlwaysSound--;
-                 if (KeyVal() == Right)    PlaySound(HelpSetAlwaysSoundMP3,10);
+                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
                  if (KeyVal() == Select)   Esc= true;
               }
               break;
@@ -863,7 +890,7 @@ byte ReadKey() {
                  delay(300);
                  if (KeyVal() == Down)   if (LowTone > 50) LowTone-= 50;
                  if (KeyVal() == Up)     if (LowTone < (HighTone-100)) LowTone+= 50;
-                 if (KeyVal() == Right)    PlaySound(HelpSetLowestPitchMP3,10);
+                 if (KeyVal() == Right)  PlayHelp(OptionNr); 
                  if (KeyVal() == Select) Esc= true;
               }
               break;    
@@ -873,7 +900,7 @@ byte ReadKey() {
                  delay(300);
                  if (KeyVal() == Down)   if (HighTone > (LowTone+100)) HighTone-= 50;
                  if (KeyVal() == Up)     if (HighTone < 9000) HighTone+= 50;
-                 if (KeyVal() == Right)    PlaySound(HelpSetHigestPitchMP3,10);
+                 if (KeyVal() == Right)  PlayHelp(OptionNr); 
                  if (KeyVal() == Select) Esc= true;
               }
               break;  
@@ -882,16 +909,16 @@ byte ReadKey() {
                  PlayNumber(AutoAdjustWindow);
                  if (KeyVal() == Down)   if (AutoAdjustWindow > 50)   AutoAdjustWindow-= 10;
                  if (KeyVal() == Up)     if (AutoAdjustWindow < 300)  AutoAdjustWindow+= 10;
-                 if (KeyVal() == Right)    PlaySound(HelpSetAutoAdjustWindowMP3,10);
+                 if (KeyVal() == Right)  PlayHelp(OptionNr); 
                  if (KeyVal() == Select) Esc= true;
               }
               break;
-      case 10: Esc= false;
+     case 10: Esc= false;
               while (!Esc) {
                  PlayNumber(GetReadyTime);
                  if (KeyVal() == Down)   if (GetReadyTime > 2)       GetReadyTime-= 1;
                  if (KeyVal() == Up)     if (GetReadyTime < 20)      GetReadyTime+= 1;
-                 if (KeyVal() == Right)    PlaySound(HelpSetTimeToGetReadyMP3,10);
+                 if (KeyVal() == Right)  PlayHelp(OptionNr); 
                  if (KeyVal() == Select) Esc= true;
               }
               break;             
@@ -903,7 +930,7 @@ byte ReadKey() {
                  if (AverageValue == 3) PlaySound(HighMP3,4);
                  if (KeyVal() == Down)   if (AverageValue > 0)       AverageValue-= 1;
                  if (KeyVal() == Up)     if (AverageValue < 3)       AverageValue+= 1;
-                 if (KeyVal() == Right)    PlaySound(HelpSetSensorAverageCountMP3,10);
+                 if (KeyVal() == Right)  PlayHelp(OptionNr); 
                  if (KeyVal() == Select) Esc= true;
               }
               break;
@@ -914,7 +941,7 @@ byte ReadKey() {
                  if (SampleSpeed == 2) PlaySound(SlowMP3,4);
                  if (KeyVal() == Down)   if (SampleSpeed > 0)       SampleSpeed-= 1;
                  if (KeyVal() == Up)     if (SampleSpeed < 2)       SampleSpeed+= 1;
-                 if (KeyVal() == Right)    PlaySound(HelpSetSampleSpeedMP3,8);
+                 if (KeyVal() == Right)  PlayHelp(OptionNr); 
                  if (KeyVal() == Select) Esc= true;
               }
               break;  
@@ -924,7 +951,7 @@ byte ReadKey() {
                 if (SetToDefaults) PlaySound(RestoreFactoryDefaultsEnabledMP3,4); else PlaySound(RestoreFactoryDefaultsDisabledMP3,4); 
                 if (KeyVal() == Up)       if (SetToDefaults < 1) SetToDefaults= true;
                 if (KeyVal() == Down)     if (SetToDefaults > 0) SetToDefaults= false;
-                if (KeyVal() == Right)    PlaySound(HelpRestoreFactorySettingsMP3,10);
+                if (KeyVal() == Right)    PlayHelp(OptionNr); 
                 if (KeyVal() == Select)   Esc= true;
               }
               if (SetToDefaults) {
@@ -1239,7 +1266,7 @@ void loop() {
       if (KeyPressed == Up)        MoveSensorWindow(+10);
     }  
   #endif
-  if (SampleSpeed) delay(SampleSpeed*5); //0,5,10  
+  if (SampleSpeed) delay((1 << SampleSpeed-1)*5); //0,5,10,20  
   #ifdef DEBUG-LCD
     LoopCounter++;
   #endif  
