@@ -3,13 +3,13 @@ __asm volatile ("nop");
 #endif
 
 //====================================Compiler options=============================================================
-//#define DEBUG-LCD       //Show Debug on LCD screen. Enables debug info on LCD screen, only with LCD 
+#define DEBUG-LCD       //Show Debug on LCD screen. Enables debug info on LCD screen, only with LCD 
 //#define DDS9833         //Enable for a Kedok version with a DDS module. Disable for TTL output 
-#define SPEECH        //Enable if you compile a Kedok speech version. Disable for LCD
+//#define SPEECH        //Enable if you compile a Kedok speech version. Disable for LCD
 //#define DEBUG-SPEECH  //Give debug info if you compile a Kedok speech version
 
 const   char      Version[5]="5.01";
-const   char      Owner[10]=     "";
+const   char      Owner[16]= "Demo";
 const   char      SerialNr[23]=  "";
 
 #ifdef SPEECH
@@ -48,6 +48,8 @@ To Do:
  Full test if without DDS module
  Always Sound does not work if DDS connected.
  Add English Help files
+ Test Factory settings with speech
+ Add an option to escape the menu without saving
  //Add smooth tone 
  //Sound menu options for average and loop speed
  //Auto calibrate does not start
@@ -120,9 +122,11 @@ To Do:
 //Loops DDS FAST:     1200
 //      DDS MEDIUM:    173
 //      DDS SLOW:       93
+//      DDS SLOWEST     45
 //      TTL FAST:
 //      TTL MEDIUM:
-//      TTL SLOW:  
+//      TTL SLOW: 
+//      TTL SLOWEST: 
 
 ////////////////////////////////////////////
 #ifdef SPEECH
@@ -308,12 +312,10 @@ byte    GetReadyTime=             20; // 20 Seconds
 byte    LogMode=                   0;
 word    LogCounter=                0;
 byte    MP3Volume=                25;
-byte    LogBufferStart=           30; 
+byte    LogBufferStart=           50; 
 word    LogUpdTime=              250; //4 times a second for 1000 values about 4 Min. logging 
-byte    ResetAll=                  0;
-byte    AverageValue=              0; //Read 0 values to average, Default none. Steps 0,5,20,85
-byte    SampleSpeed=               0; //Loop delay
-
+byte    AverageValue=              1; //Read 0 values to average, Default none. Steps 0,5,20,85
+byte    SampleSpeed=               0; //Loop delay 0,5,10,20
 byte    Display=                   0;
 
 struct SettingsObj {
@@ -566,7 +568,7 @@ void WriteLog(word Value) {
  }  
 
 void OutputLog() {
-  for (int C= 20; C<999; C++) { 
+  for (int C= LogBufferStart; C<999; C++) { 
     Serial.println(EEPROM.read(C));
   }
   StopLogging();
@@ -654,7 +656,7 @@ void AutoAdjust() {
     if (TimeOutCounter > 2000) break;
     delay(10);
   }
-  if (LowestReading < 673) {
+  if (LowestReading < (1023-(AutoAdjustWindow+ThresholdWindow))) { //Calculate lowest value within AD range
     Beep(3,2000);
     MinValue= LowestReading-20;
     MaxValue= MinValue+AutoAdjustWindow;
@@ -960,7 +962,8 @@ byte ReadKey() {
               }
               if (SetToDefaults) {
                   PlaySound(AllSettingsResetToDefaultsMP3,4);
-                  //Resore factory settings
+                  EEPROM.write(0,0); 
+                  Reset(); 
               }
               break;                        
     }
@@ -1137,7 +1140,7 @@ byte ReadKey() {
     }
     Esc= false;
     while (!Esc) {
-      ShowLCD("Sampling: "+(String)SampleModes[SampleSpeed], 1, true);
+      ShowLCD("Samples: "+(String)SampleModes[SampleSpeed], 1, true);
       delay(300);
       if (KeyVal() == Down)   if (SampleSpeed > 0) SampleSpeed--;
       if (KeyVal() == Up)     if (SampleSpeed < 3) SampleSpeed++;
@@ -1151,15 +1154,16 @@ byte ReadKey() {
       if (KeyVal() == Up)     if (LogMode < 2) LogMode++;
       if (KeyVal() == Select) Esc= true;
     }
-    Esc= false;   
+    Esc= false;
+    boolean SetToDefaults= false;   
     while (!Esc) {
-      ShowLCD("Reset ALL: "+(String)YesNoArr[ResetAll], 1, true);
+      ShowLCD("Reset ALL: "+(String)YesNoArr[SetToDefaults], 1, true);
       delay(300); 
-      if (KeyVal() == Down)   if (ResetAll > 0) ResetAll--;
-      if (KeyVal() == Up)     if (ResetAll < 1) ResetAll++;
+      if (KeyVal() == Down)   if (SetToDefaults > 0) SetToDefaults= false;
+      if (KeyVal() == Up)     if (SetToDefaults < 1) SetToDefaults= true;
       if (KeyVal() == Select) Esc= true;
     }
-    if (ResetAll) { 
+    if (SetToDefaults) { 
       EEPROM.write(0,0); 
       Reset(); 
     }
