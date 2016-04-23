@@ -3,9 +3,9 @@ __asm volatile ("nop");
 #endif
 
 //====================================Compiler options=============================================================
-#define DEBUG-LCD       //Show Debug on LCD screen. Enables debug info on LCD screen, only with LCD 
-//#define DDS9833         //Enable for a Kedok version with a DDS module. Disable for TTL output 
-//#define SPEECH        //Enable if you compile a Kedok speech version. Disable for LCD
+//#define DEBUG-LCD       //Show Debug on LCD screen. Enables debug info on LCD screen, only with LCD 
+#define DDS9833         //Enable for a Kedok version with a DDS module. Disable for TTL output 
+#define SPEECH        //Enable if you compile a Kedok speech version. Disable for LCD
 //#define DEBUG-SPEECH  //Give debug info if you compile a Kedok speech version
 
 const   char      Version[5]="5.01";
@@ -177,7 +177,7 @@ To Do:
    #define SetMaximalSensorValueMP3            22  
    #define SetSensorThresholdVlaueMP3          25  
    #define SetSoundCurveValueMP3               26  
-   #define SetPichReverseMP3                   24  
+   #define SetPitchReverseMP3                  24  
    #define SetLowestPitchMP3                   21  
    #define SetHigestPitchMP3                   20  
    #define SetAutoAdjustWindowMP3              19
@@ -226,7 +226,7 @@ To Do:
    #define HelpSetMaximalSensorValueMP3       122  
    #define HelpSetSensorThresholdValueMP3     125  
    #define HelpSetSoundCurveValueMP3          126  
-   #define HelpSetPichReverseMP3              124  
+   #define HelpSetPitchReverseMP3             124  
    #define HelpSetLowestPitchMP3              121  
    #define HelpSetHigestPitchMP3              120  
    #define HelpSetAutoAdjustWindowMP3         119
@@ -277,10 +277,10 @@ int NoteDurations[] = {
   const   byte      Right=          5;
   const   byte      RightLong=     15;
 #endif 
-const   byte      Value=          1;
-const   byte      Bar=            2;
-const   boolean   Disable=     true;
-const   boolean   Enable=     false;
+const   byte      Value=            1;
+const   byte      Bar=              2;
+const   boolean   Disable=       true;
+const   boolean   Enable=       false;
 const   char      EmptyLine[17]=  "                ";
 
 #ifdef DDS9833
@@ -288,35 +288,35 @@ const   char      EmptyLine[17]=  "                ";
   const   float     XTALFreq=  25.0E6;            // On-board X-TAL reference frequency.
 #endif  
 
-word    MinValue=                100;
-word    MaxValue=                800;
+word    MinValue=                 100;
+word    MaxValue=                 800;
 #ifdef DDS9833
-  word    LowTone=               150; 
-  word    HighTone=             2000;
+  word    LowTone=                150; 
+  word    HighTone=              2000;
 #else
-  word    LowTone=               100; 
-  word    HighTone=             1750;
+  word    LowTone=                100; 
+  word    HighTone=              1750;
 #endif
 
-byte    Curve=                     0;
-byte    WaveShape=                 0;
-byte    PitchRev=              false;
+byte    Curve=                      0;
+byte    WaveShape=                  0;
+byte    PitchRev=               false;
 #ifdef SPEECH
-  byte    AlwaysSound=          true; 
+  byte    AlwaysSound=           true; 
 #else
-  byte    AlwaysSound=         false; 
+  byte    AlwaysSound=          false; 
 #endif  
-word    AutoAdjustWindow=        200; // Normal card size
-byte    ThresholdWindow=         150; 
-byte    GetReadyTime=             20; // 20 Seconds
-byte    LogMode=                   0;
-word    LogCounter=                0;
-byte    MP3Volume=                25;
-byte    LogBufferStart=           50; 
-word    LogUpdTime=              250; //4 times a second for 1000 values about 4 Min. logging 
-byte    AverageValue=              1; //Read 0 values to average, Default none. Steps 0,5,20,85
-byte    SampleSpeed=               0; //Loop delay 0,5,10,20
-byte    Display=                   0;
+word    AutoAdjustWindow=         200; // Normal card size
+byte    ThresholdWindow=          150; 
+byte    GetReadyTime=              20; // 20 Seconds
+byte    LogMode=                    0;
+word    LogCounter=                 0;
+byte    MP3Volume=                 25;
+byte    LogBufferStart=            50; 
+word    LogUpdTime=               250; //4 times a second for 1000 values about 4 Min. logging 
+byte    AverageValue=               1; //Read 0 values to average, Default none. Steps 0,5,20,85
+byte    SampleSpeed=                0; //Loop delay 0,5,10,20
+byte    Display=                    0;
 
 struct SettingsObj {
   word MinValue;
@@ -508,11 +508,11 @@ void PlayMelody() {
   }
 
   void WriteToDDS(int Data) {  
-    digitalWrite(FSyncPin, LOW);        // Set FSyncPinPin low before writing to AD9833 registers
-    delayMicroseconds(5);               // Give AD9833 time to get ready to receive data.
-    SPI.transfer(highByte(Data));       // Each AD9833 register is 32 bits wide and each 16
-    SPI.transfer(lowByte (Data));       // bits has to be transferred as 2 x 8-bit bytes.
-    digitalWrite(FSyncPin, HIGH);       // Write done. Set FSyncPinPin high
+    digitalWrite(FSyncPin, LOW);       // Set FSyncPinPin low before writing to AD9833 registers
+    delayMicroseconds(5);              // Give AD9833 time to get ready to receive data.
+    SPI.transfer(highByte(Data));      // Each AD9833 register is 32 bits wide and each 16
+    SPI.transfer(lowByte (Data));      // bits has to be transferred as 2 x 8-bit bytes.
+    digitalWrite(FSyncPin, HIGH);      // Write done. Set FSyncPinPin high
   }
 #endif
 
@@ -761,7 +761,7 @@ byte ReadKey() {
 
   void PlayNumber(word Nr) {
     PlaySound(TheValueIsMP3,2);
-    if (Nr > 999) PlaySound((Nr/1000),1);
+    if (Nr > 999) PlaySound(( Nr/1000),1);
     if (Nr > 99)  PlaySound(((Nr/100)%10),1);
     if (Nr > 9)   PlaySound(((Nr/10)%10),1);
     PlaySound((Nr%10),5);
@@ -774,7 +774,7 @@ byte ReadKey() {
       case  2: PlaySound(HelpSetMaximalSensorValueMP3,13); break; 
       case  3: PlaySound(HelpSetSensorThresholdValueMP3,10); break;
       case  4: PlaySound(HelpSetSoundCurveValueMP3,11); break;
-      case  5: PlaySound(HelpSetPichReverseMP3,9); break;
+      case  5: PlaySound(HelpSetPitchReverseMP3,9); break;
       case  6: PlaySound(HelpSetAlwaysSoundMP3,8); break;
       case  7: PlaySound(HelpSetLowestPitchMP3,7); break;  
       case  8: PlaySound(HelpSetHigestPitchMP3,7); break;
@@ -807,7 +807,7 @@ byte ReadKey() {
         case  2: PlaySound(SetMaximalSensorValueMP3,8); break;
         case  3: PlaySound(SetSensorThresholdVlaueMP3,8); break;  
         case  4: PlaySound(SetSoundCurveValueMP3,8); break;
-        case  5: PlaySound(SetPichReverseMP3,8); break;
+        case  5: PlaySound(SetPitchReverseMP3,8); break;
         case  6: PlaySound(SetAlwaysSoundMP3,8); break;    
         case  7: PlaySound(SetLowestPitchMP3,8); break;
         case  8: PlaySound(SetHigestPitchMP3,8); break;
