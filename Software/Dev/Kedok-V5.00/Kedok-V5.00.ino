@@ -4,7 +4,7 @@ __asm volatile ("nop");
 
 //====================================Compiler options=============================================================
 //#define DEBUG-LCD       //Show Debug on LCD screen. Enables debug info on LCD screen, only with LCD 
-#define DDS9833         //Enable for a Kedok version with a DDS module. Disable for TTL output 
+//#define DDS9833         //Enable for a Kedok version with a DDS module. Disable for TTL output 
 #define SPEECH        //Enable if you compile a Kedok speech version. Disable for LCD
 //#define DEBUG-SPEECH  //Give debug info if you compile a Kedok speech version
 
@@ -50,6 +50,7 @@ To Do:
  Add English Help files
  Test Factory settings with speech
  Add an option to escape the menu without saving
+ Change text for 055-Sensor Level To High.mp3. Say the value.
  //Add smooth tone 
  //Sound menu options for average and loop speed
  //Auto calibrate does not start
