@@ -52,6 +52,7 @@ To Do:
  Add an option to escape the menu without saving
  Change text for 055-Sensor Level To High.mp3. Say the value.
  Start to add a i2c ADS1015 12-Bit ADC - 4 Channel
+ //Add parameter to enable/disable  say value is. 
  //Add speech say freqency at save
  //Add English Help files
  //Add smooth tone 
@@ -686,7 +687,7 @@ void AutoAdjust() {
   }  
   #ifdef SPEECH
      PlaySound(CalibratedAtMP3,5);
-     PlayNumber(MinValue);
+     PlayNumber(MinValue, 1);
      PlaySound(AutoAdjustFinishedMP3,6);
      PlaySound(HaveFunShootingMP3,5);
   #else
@@ -767,8 +768,8 @@ byte ReadKey() {
     DelaySecIntr(Time,true);
   }
 
-  void PlayNumber(word Nr) {
-    PlaySound(TheValueIsMP3,2);
+  void PlayNumber(word Nr, byte EnableTheValueText) {
+    if (EnableTheValueText) PlaySound(TheValueIsMP3,2);
     if (Nr > 999) PlaySound(( Nr/1000),1);
     if (Nr > 99)  PlaySound(((Nr/100)%10),1);
     if (Nr > 9)   PlaySound(((Nr/10)%10),1);
@@ -835,7 +836,7 @@ byte ReadKey() {
     switch(OptionNr) {
       case 0: Esc= false;
               while (!Esc) {
-                 PlayNumber(MP3Volume);
+                 PlayNumber(MP3Volume, 1);
                  if (KeyVal() == Up)       if (MP3Volume < 30) MP3Volume+= 1;
                  if (KeyVal() == Down)     if (MP3Volume >  5) MP3Volume-= 1;
                  if (KeyVal() == Right)    PlayHelp(OptionNr); 
@@ -845,7 +846,7 @@ byte ReadKey() {
               break;
       case 1: Esc= false;
               while (!Esc) {
-                 PlayNumber(MinValue);
+                 PlayNumber(MinValue, 1);
                  if (KeyVal() == Up)       if (MinValue < (MaxValue-20)) MinValue+= 5;
                  if (KeyVal() == Down)     if (MinValue > 10) MinValue-= 5;
                  if (KeyVal() == Right)    PlayHelp(OptionNr); 
@@ -854,7 +855,7 @@ byte ReadKey() {
               break;
       case 2: Esc= false;
               while (!Esc) {
-                 PlayNumber(MaxValue);
+                 PlayNumber(MaxValue, 1);
                  if (KeyVal() == Up)       if (MaxValue < 990) MaxValue+= 5;
                  if (KeyVal() == Down)     if (MaxValue > (MinValue+20)) MaxValue-= 5;
                  if (KeyVal() == Right)    PlayHelp(OptionNr); 
@@ -863,7 +864,7 @@ byte ReadKey() {
               break;
       case 3: Esc= false;
               while (!Esc) {
-                 PlayNumber(ThresholdWindow);
+                 PlayNumber(ThresholdWindow, 1);
                  if (KeyVal() == Up)       if (ThresholdWindow < 190) ThresholdWindow+= 10;
                  if (KeyVal() == Down)     if (ThresholdWindow > 10)  ThresholdWindow-= 10;
                  if (KeyVal() == Right)    PlayHelp(OptionNr); 
@@ -872,7 +873,7 @@ byte ReadKey() {
               break;     
       case 4: Esc= false;
               while (!Esc) {
-                 PlayNumber(Curve);
+                 PlayNumber(Curve, 1);
                  if (KeyVal() == Up)       if (Curve < 5) Curve++;
                  if (KeyVal() == Down)     if (Curve > 0) Curve--;
                  if (KeyVal() == Right)    PlayHelp(OptionNr); 
@@ -906,7 +907,7 @@ byte ReadKey() {
                  if (KeyVal() == Right)  PlayHelp(OptionNr); 
                  if (KeyVal() == Select) Esc= true;
               }
-              PlaySound(LowPitchSetAtMP3,5); PlayNumber(LowTone); PlaySound(HertzMP3,2);
+              PlaySound(LowPitchSetAtMP3,5); PlayNumber(LowTone, 0); PlaySound(HertzMP3,2);
               break;    
       case 8: Esc= false;
               while (!Esc) {
@@ -917,11 +918,11 @@ byte ReadKey() {
                  if (KeyVal() == Right)  PlayHelp(OptionNr); 
                  if (KeyVal() == Select) Esc= true;
               }
-              PlaySound(HighPitchSetAtMP3,5); PlayNumber(HighTone); PlaySound(HertzMP3,2);
+              PlaySound(HighPitchSetAtMP3,5); PlayNumber(HighTone, 0); PlaySound(HertzMP3,2);
               break;  
       case 9: Esc= false;
               while (!Esc) {
-                 PlayNumber(AutoAdjustWindow);
+                 PlayNumber(AutoAdjustWindow, 1);
                  if (KeyVal() == Down)   if (AutoAdjustWindow > 50)   AutoAdjustWindow-= 10;
                  if (KeyVal() == Up)     if (AutoAdjustWindow < 300)  AutoAdjustWindow+= 10;
                  if (KeyVal() == Right)  PlayHelp(OptionNr); 
@@ -930,7 +931,7 @@ byte ReadKey() {
               break;
      case 10: Esc= false;
               while (!Esc) {
-                 PlayNumber(GetReadyTime);
+                 PlayNumber(GetReadyTime, 1);
                  if (KeyVal() == Down)   if (GetReadyTime > 2)       GetReadyTime-= 1;
                  if (KeyVal() == Up)     if (GetReadyTime < 20)      GetReadyTime+= 1;
                  if (KeyVal() == Right)  PlayHelp(OptionNr); 
