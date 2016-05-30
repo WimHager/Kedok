@@ -38,6 +38,7 @@ const   char      SerialNr[23]=  "";
               CAD and 3D printworks Jan Stinissen
 
 To Do:
+
  Battery level check?
  ShowLCD bug. no clear
  Reset all if version updated
@@ -47,11 +48,12 @@ To Do:
           Buggy at B28 Setting, needs a full test.
  Full test if without DDS module
  Always Sound does not work if DDS connected.
-
  Test Factory settings with speech
  Add an option to escape the menu without saving
  Change text for 055-Sensor Level To High.mp3. Say the value.
- // Add English Help files
+ Start to add a i2c ADS1015 12-Bit ADC - 4 Channel
+ //Add speech say freqency at save
+ //Add English Help files
  //Add smooth tone 
  //Sound menu options for average and loop speed
  //Auto calibrate does not start
@@ -117,6 +119,7 @@ To Do:
  07-04-2016 Added Sample rate
  09-04-2016 Added Time settings for wait time Get Ready auto adjust
  10-04-2016 Added Dutch help files
+ 22-05-2016 moved to Stable branch
  */
 
 //Note Audio pin 3 or 10. 82 Ohm and 470N in serie
@@ -223,6 +226,9 @@ To Do:
    #define SlowMP3                             62
    #define MediumMP3                           63
    #define SlowestMP3                          64
+   #define LowPitchSetAtMP3                    65
+   #define HighPitchSetAtMP3                   66
+   #define HertzMP3                            67   
 
    #define HelpSetMinimalSensorValueMP3       123  
    #define HelpSetMaximalSensorValueMP3       122  
@@ -900,6 +906,7 @@ byte ReadKey() {
                  if (KeyVal() == Right)  PlayHelp(OptionNr); 
                  if (KeyVal() == Select) Esc= true;
               }
+              PlaySound(LowPitchSetAtMP3,5); PlayNumber(LowTone); PlaySound(HertzMP3,2);
               break;    
       case 8: Esc= false;
               while (!Esc) {
@@ -910,6 +917,7 @@ byte ReadKey() {
                  if (KeyVal() == Right)  PlayHelp(OptionNr); 
                  if (KeyVal() == Select) Esc= true;
               }
+              PlaySound(HighPitchSetAtMP3,5); PlayNumber(HighTone); PlaySound(HertzMP3,2);
               break;  
       case 9: Esc= false;
               while (!Esc) {
