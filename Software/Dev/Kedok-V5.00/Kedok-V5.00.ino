@@ -40,6 +40,7 @@ const   char      SerialNr[23]=  "";
 To Do:
 
  Battery level check?
+ Start to add a i2c ADS1015 12-Bit ADC - 4 Channel 
  ShowLCD bug. no clear
  Reset all if version updated
  Better Auto adjust
@@ -50,8 +51,7 @@ To Do:
  Always Sound does not work if DDS connected.
  Test Factory settings with speech
  Add an option to escape the menu without saving
- Change text for 055-Sensor Level To High.mp3. Say the value.
- Start to add a i2c ADS1015 12-Bit ADC - 4 Channel
+ //Change text for 055-Sensor Level To High.mp3. Say the value.
  //Add parameter to enable/disable  say value is. 
  //Add speech say freqency at save
  //Add English Help files
@@ -678,6 +678,7 @@ void AutoAdjust() {
   }else{
      #ifdef SPEECH
         PlaySound(CalibrationLevelToHighMP3,10);
+        PlayNumber(LowestReading,1);
      #else
         lcd.clear();
         ShowLCD("Warning!!", 0, true);
