@@ -1,0 +1,26 @@
+/* 
+  To Pot volume
+       ^
+       |
+      ---              To Keyboard
+      | | 5K6               ^
+      | |                   |
+      ---              -----------
+       |              |           |
+       |              |           |                    
+[0][0][X][0][0][0][0][X][X][X][X][X][0][0][0]
+      D10            D5 D4 D3 D2 GND
+
+                                GND <---[X][0]
+                                 RX <---[X][0]         To MP3 board
+                                VCC <---[X][X]---> TX
+
+
+                  A3             VCC   GND
+[0][0][0][0][0][0][X][0][0][0][0][X][0][X][0]
+                   |              |     |              |--> To Charger GND
+                   |             ---    ---------------|
+                   V             | |                   |--> To Sensor Jack
+                                 V V
+      To Sensor jack    To Charger To Sensor jack
+*/

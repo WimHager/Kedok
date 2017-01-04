@@ -3,10 +3,10 @@ __asm volatile ("nop");
 #endif
 
 //====================================Compiler options=============================================================
-//#define DEBUG-LCD       //Show Debug on LCD screen. Enables debug info on LCD screen, only with LCD 
-//#define DDS9833         //Enable for a Kedok version with a DDS module. Disable for TTL output 
-#define SPEECH        //Enable if you compile a Kedok speech version. Disable for LCD
-//#define DEBUG-SPEECH  //Give debug info if you compile a Kedok speech version
+#define DEBUG-LCD     //Show Debug on LCD screen. Enables debug info on LCD screen, only with LCD 
+//#define DDS9833       //Enable for a Kedok version with a DDS module. Disable for TTL output (DDS only with LCD)
+//#define SPEECH        //Enable if you compile a Kedok speech version. Disable for LCD
+//#define DEBUG-SPEECH  //Give debug info over serial port if you compile a Kedok speech version
 
 const   char      Version[5]="5.01";
 const   char      Owner[16]= "Demo";
@@ -49,8 +49,12 @@ To Do:
           Buggy at B28 Setting, needs a full test.
  Full test if without DDS module
  Always Sound does not work if DDS connected.
- Test Factory settings with speech
  Add an option to escape the menu without saving
+ Add option to save users presets
+ Change delay's in speech, some are utterly slow alo improve saying values (remove "value is" in some cases) 
+ Beginners mode, wide window
+ //Rename Treshhold to Lead in
+ //Test Factory settings with speech
  //Change text for 055-Sensor Level To High.mp3. Say the value.
  //Add parameter to enable/disable  say value is. 
  //Add speech say freqency at save
@@ -133,6 +137,64 @@ To Do:
 //      TTL MEDIUM:
 //      TTL SLOW: 
 //      TTL SLOWEST: 
+
+/*  Nano speech =====================================================================================
+ 
+  To Pot volume
+       ^
+       |
+      ---              To Keyboard
+      | | 5K6               ^
+      | |                   |
+      ---              -----------
+       |              |           |
+       |              |           |                    
+[0][0][X][0][0][0][0][X][X][X][X][X][0][0][0]
+      D10            D5 D4 D3 D2 GND
+
+                                GND <---[X][0]
+                                 TX <---[X][0]         To MP3 board
+                                VCC <---[X][X]---> RX
+
+
+                  A3             VCC   GND
+[0][0][0][0][0][0][X][0][0][0][0][X][0][X][0]
+                   |              |     |              |--> To Charger GND
+                   |             ---    ---------------|
+                   v             | |                   |--> To Sensor Jack
+                                 v v
+              To Sensor jack     To Charger To Sensor jack
+*/
+
+/* Lenoardo LCD =====================================================================================
+
+                                        To Pot volume
+                                             ^
+                                             |
+                                            ---             
+                                            | | 5K6           
+                                            | |               
+                                            ---         
+                                             |             
+                                             |    
+[0][0][0][0][0][0][0][0][0][0]  [0][0][0][0][X][0][0][0]
+                                            D3
+
+
+                                             GND <---[0][0]
+                                                     [0][0]       
+                                             VCC <---[0][0]
+
+
+
+                       +5  Gnd        A0 A1 A2 A3
+           [0][0][0][0][X][X][X][0]   [0][X][0][0][0][0]
+                        |                 |
+                        |                 |
+                        v To Charger      v To Sensor jack
+
+*/
+
 
 ////////////////////////////////////////////
 #ifdef SPEECH
@@ -470,12 +532,12 @@ void PlayTone(word Tone, word Duration) {
    #endif    
 }
 
-void Beep(byte Beeps, word Tone) {
+void Beep(byte Beeps, word Pitch) {
   for (byte X=0; X<Beeps; X++) {
     #ifdef DDS8933
-        PlayTone(AudioPin,Tone,400);
+        PlayTone(AudioPin,Pitch,400);
     #else
-        PlayTone(Tone,200);
+        PlayTone(Pitch,200);
     #endif        
     delay(400);
   }
@@ -621,7 +683,7 @@ void MoveSensorWindowToLowestRead() {
 }  
 
 void EEPromClear() {
-  for (int I = 0; I < 999; I++) EEPROM.write(I, 0); //reserve 1000 to 1023 for serial
+  for (int I = 0; I < 999; I++) EEPROM.write(I, 0); //reserve 1000 to 1023 for serial number
 }
 
 void AutoAdjust() {
@@ -687,10 +749,10 @@ void AutoAdjust() {
      #endif 
   }  
   #ifdef SPEECH
-     PlaySound(CalibratedAtMP3,5);
-     PlayNumber(MinValue, 1);
-     PlaySound(AutoAdjustFinishedMP3,6);
-     PlaySound(HaveFunShootingMP3,5);
+     PlaySound(CalibratedAtMP3,3);
+     PlayNumber(MinValue, 0);
+     PlaySound(AutoAdjustFinishedMP3,3);
+     PlaySound(HaveFunShootingMP3,4);
   #else
     lcd.clear();
     if (!Display)ShowStatusLCD();
@@ -742,8 +804,8 @@ byte ReadKey() {
   void SendMP3Command(int8_t Command, int16_t Data) {
     #ifdef DEBUG-SPEECH
       Serial.println("MP3 COMMAND");   
-      Serial.println(Command);
-      Serial.println(Data);
+      Serial.println("CMD: "+(String)Command);
+      Serial.println("Data: "+(String)Data);
     #endif   
     delay(20);
     Send_buf[0] = 0x7e; //starting byte
@@ -774,7 +836,7 @@ byte ReadKey() {
     if (Nr > 999) PlaySound(( Nr/1000),1);
     if (Nr > 99)  PlaySound(((Nr/100)%10),1);
     if (Nr > 9)   PlaySound(((Nr/10)%10),1);
-    PlaySound((Nr%10),5);
+    PlaySound((Nr%10),3);
   }
 
   void PlayHelp(byte Option) {
@@ -797,6 +859,13 @@ byte ReadKey() {
   }
 
   byte KeyVal() {
+    #ifdef DEBUG-SPEECH
+       Serial.print("Key: ");
+       if (!digitalRead(Key1Pin)) Serial.println("Select"); 
+       if (!digitalRead(Key1Pin)) Serial.println("Down");
+       if (!digitalRead(Key1Pin)) Serial.println("Up");
+       if (!digitalRead(Key1Pin)) Serial.println("Right");
+    #endif
     if (!digitalRead(Key1Pin)) {PlayTone(1000,20); return Select;}
     if (!digitalRead(Key2Pin)) {PlayTone(1000,20); return Down;}
     if (!digitalRead(Key3Pin)) {PlayTone(1000,20); return Up;}
@@ -908,7 +977,7 @@ byte ReadKey() {
                  if (KeyVal() == Right)  PlayHelp(OptionNr); 
                  if (KeyVal() == Select) Esc= true;
               }
-              PlaySound(LowPitchSetAtMP3,5); PlayNumber(LowTone, 0); PlaySound(HertzMP3,2);
+              PlaySound(LowPitchSetAtMP3,4); PlayNumber(LowTone, 0); PlaySound(HertzMP3,2);
               break;    
       case 8: Esc= false;
               while (!Esc) {
@@ -919,7 +988,7 @@ byte ReadKey() {
                  if (KeyVal() == Right)  PlayHelp(OptionNr); 
                  if (KeyVal() == Select) Esc= true;
               }
-              PlaySound(HighPitchSetAtMP3,5); PlayNumber(HighTone, 0); PlaySound(HertzMP3,2);
+              PlaySound(HighPitchSetAtMP3,4); PlayNumber(HighTone, 0); PlaySound(HertzMP3,2);
               break;  
       case 9: Esc= false;
               while (!Esc) {
@@ -1057,7 +1126,7 @@ byte ReadKey() {
     }
     Esc= false; 
     while (!Esc) {
-      ShowLCD("Threshold: "+(String)ThresholdWindow, 1, true);
+      ShowLCD("Lead in: "+(String)ThresholdWindow, 1, true);
       delay(300);
       if (KeyVal() == Down)   if (ThresholdWindow > 10)  ThresholdWindow-= 10;
       if (KeyVal() == Up)     if (ThresholdWindow < 190) ThresholdWindow+= 10;
