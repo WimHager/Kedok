@@ -7,9 +7,10 @@ __asm volatile ("nop");
 //#define DDS9833       //Enable for a Kedok version with a DDS module. Disable for TTL output (DDS only with LCD)
 //#define SPEECH        //Enable if you compile a Kedok speech version. Disable for LCD
 //#define DEBUG-SPEECH  //Give debug info over serial port if you compile a Kedok speech version
+#define ADS1015       //Enable for a Kedok version with a ADS 1015 i2C module in the scope. (Only with LCD)
 
-const   char      Version[5]="5.01";
-const   char      Owner[16]= "DEMO";
+const   char      Version[5]="5.20";
+const   char      Owner[16]= "i2C";
 const   char      SerialNr[23]=  "";
 
 #ifdef SPEECH
@@ -41,6 +42,8 @@ To Do:
 
  Battery level check?
  Start to add a i2c ADS1015 12-Bit ADC - 4 Channel 
+ Add connection diagram for ADS1015
+ Add batt check if i2C is used
  ShowLCD bug. no clear
  Reset all if version updated
  Better Auto adjust
@@ -203,6 +206,15 @@ To Do:
 #else
   #include <LiquidCrystal.h>
   #include <LcdBarGraph.h>
+#endif
+#ifdef ADS1015
+  #define SCL_PIN 2
+  #define SCL_PORT PORTD
+  #define SDA_PIN 1
+  #define SDA_PORT PORTD
+  #include <SoftI2CMaster.h>
+  #include <Adafruit_ADS1015.h>
+  Adafruit_ADS1015 ads(0x48);
 #endif
 #ifdef DDS9833
   #include <SPI.h>
@@ -511,6 +523,14 @@ float fscale( float originalMin, float originalMax, float newBegin, float newEnd
 void Reset() {
   asm volatile ("  jmp 0");
 }  
+
+word GetSensorVal() {
+  #ifdef ADS1015
+     return ads.readADC_SingleEnded(0)/2;  //Make it 10 bits for now
+  #else
+     return analogRead(SensorPin);
+  #endif   
+}
 
 word ReadValue(word AvgVal) { 
   if (!AverageValue) return analogRead(SensorPin); // For the sake of speed
@@ -1292,6 +1312,9 @@ void setup() {
     AD9833reset();     // Reset AD9833.
     SetFrequency(0);   // Set the frequency
   #endif  
+  #ifdef ADS1015
+    ads.begin();
+  #endif
   #ifndef SPEECH
     PlayMelody();
     #ifdef DDS9833
@@ -1325,7 +1348,7 @@ void loop() {
   }else if (Reading < MaxValue) {
      if (PitchRev) AudioTone= fscale(MinValue,MaxValue,LowTone,HighTone,Reading,Curve);
      else AudioTone= fscale(MinValue,MaxValue,HighTone,LowTone,Reading,Curve);
-     //if (AudioTone > (HighTone-300)) AudioTone= AudioTone+300; //To test for John
+     if (AudioTone > (HighTone-300)) AudioTone= AudioTone+300; //To test for John
      PlayTone(AudioTone,0);
      if (LogMode) WriteLog(Reading);
   }else if (Reading < (MaxValue+ThresholdWindow)) {
