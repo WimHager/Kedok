@@ -44,6 +44,7 @@ To Do:
  Start to add a i2c ADS1015 12-Bit ADC - 4 Channel 
  Add connection diagram for ADS1015
  Add batt check if i2C is used
+ Add Option for frequency step.
  ShowLCD bug. no clear
  Reset all if version updated
  Better Auto adjust
@@ -141,6 +142,7 @@ To Do:
 //      TTL MEDIUM:
 //      TTL SLOW: 
 //      TTL SLOWEST: 
+//      ADS1015 FAST   447 
 
 /*  Nano speech =====================================================================================
  
@@ -208,10 +210,11 @@ To Do:
   #include <LcdBarGraph.h>
 #endif
 #ifdef ADS1015
-  #define SCL_PIN 2
+  #define SCL_PIN 3
   #define SCL_PORT PORTD
-  #define SDA_PIN 1
+  #define SDA_PIN 2
   #define SDA_PORT PORTD
+  //#include <Wire.h>
   #include <SoftI2CMaster.h>
   #include <Adafruit_ADS1015.h>
   Adafruit_ADS1015 ads(0x48);
@@ -336,7 +339,7 @@ To Do:
   byte    AudioPin=               10;
   byte    SensorPin=              A3;
 #else
-  byte    AudioPin=                3;
+  byte    AudioPin=                1;
   byte    SensorPin=              A1;
 #endif 
    
@@ -526,17 +529,20 @@ void Reset() {
 
 word GetSensorVal() {
   #ifdef ADS1015
-     return ads.readADC_SingleEnded(0)/2;  //Make it 10 bits for now
+     word Val= ads.readADC_SingleEnded(0);
+     //Serial.println(Val);
+     Val= map(Val,35,1624,0,1023); //Make it 10 bits for now
+     return Val;  
   #else
      return analogRead(SensorPin);
   #endif   
 }
 
 word ReadValue(word AvgVal) { 
-  if (!AverageValue) return analogRead(SensorPin); // For the sake of speed
+  if (!AverageValue) return GetSensorVal(); // For the sake of speed
   unsigned long ValueSum= 0;
   AvgVal= pow(AvgVal,4)+4; //Creates avg. steps of 5, 20, 85
-  for (long X=0; X<AverageValue; X++) ValueSum+= analogRead(SensorPin);
+  for (long X=0; X<AverageValue; X++) ValueSum+= GetSensorVal();
   return ValueSum/AverageValue;
 }
 
@@ -1313,6 +1319,7 @@ void setup() {
     SetFrequency(0);   // Set the frequency
   #endif  
   #ifdef ADS1015
+    //Wire.begin();
     ads.begin();
   #endif
   #ifndef SPEECH
@@ -1348,7 +1355,7 @@ void loop() {
   }else if (Reading < MaxValue) {
      if (PitchRev) AudioTone= fscale(MinValue,MaxValue,LowTone,HighTone,Reading,Curve);
      else AudioTone= fscale(MinValue,MaxValue,HighTone,LowTone,Reading,Curve);
-     if (AudioTone > (HighTone-300)) AudioTone= AudioTone+300; //To test for John
+     //if (AudioTone > (HighTone-300)) AudioTone= AudioTone+300; //To test for John
      PlayTone(AudioTone,0);
      if (LogMode) WriteLog(Reading);
   }else if (Reading < (MaxValue+ThresholdWindow)) {

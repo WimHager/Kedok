@@ -9,7 +9,7 @@ __asm volatile ("nop");
 //#define DEBUG-SPEECH  //Give debug info over serial port if you compile a Kedok speech version
 
 const   char      Version[5]="5.01";
-const   char      Owner[16]= "DEMO";
+const   char      Owner[16]= "John";
 const   char      SerialNr[23]=  "";
 
 #ifdef SPEECH
@@ -367,6 +367,7 @@ word    MaxValue=                 800;
   word    HighTone=              2000;
 #else
   word    LowTone=                100; 
+  //word    HighTone=              1450;  //Test John
   word    HighTone=              1750;
 #endif
 
@@ -1325,7 +1326,7 @@ void loop() {
   }else if (Reading < MaxValue) {
      if (PitchRev) AudioTone= fscale(MinValue,MaxValue,LowTone,HighTone,Reading,Curve);
      else AudioTone= fscale(MinValue,MaxValue,HighTone,LowTone,Reading,Curve);
-     //if (AudioTone > (HighTone-300)) AudioTone= AudioTone+300; //To test for John
+     //if (AudioTone > (HighTone-300)) AudioTone= AudioTone+300; //Test for John
      PlayTone(AudioTone,0);
      if (LogMode) WriteLog(Reading);
   }else if (Reading < (MaxValue+ThresholdWindow)) {
