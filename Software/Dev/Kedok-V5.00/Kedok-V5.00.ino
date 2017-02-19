@@ -8,8 +8,8 @@ __asm volatile ("nop");
 //#define SPEECH        //Enable if you compile a Kedok speech version. Disable for LCD
 //#define DEBUG-SPEECH  //Give debug info over serial port if you compile a Kedok speech version
 
-const   char      Version[5]="5.01";
-const   char      Owner[16]= "John";
+const   char      Version[5]="5.02";
+const   char      Owner[16]= "Demo";
 const   char      SerialNr[23]=  "";
 
 #ifdef SPEECH
@@ -53,6 +53,9 @@ To Do:
  Add option to save users presets
  Change delay's in speech, some are utterly slow alo improve saying values (remove "value is" in some cases) 
  Beginners mode, wide window
+ Test PitchStep feature
+ Set Hightone default 300 lower if Pitchstep is enabled
+ //Added PitchStep feature
  //UP and Down buttons, Speedup
  //Rename Treshhold to Lead in
  //Test Factory settings with speech
@@ -367,7 +370,6 @@ word    MaxValue=                 800;
   word    HighTone=              2000;
 #else
   word    LowTone=                100; 
-  //word    HighTone=              1450;  //Test John
   word    HighTone=              1750;
 #endif
 
@@ -382,6 +384,7 @@ byte    PitchRev=               false;
 word    AutoAdjustWindow=         200; // Normal card size
 byte    ThresholdWindow=          150; 
 byte    GetReadyTime=              20; // 20 Seconds
+word    PitchStepValue=           300; // Around the 8
 byte    LogMode=                    0;
 word    LogCounter=                 0;
 byte    MP3Volume=                 25;
@@ -389,6 +392,7 @@ byte    LogBufferStart=            50;
 word    LogUpdTime=               250; //4 times a second for 1000 values about 4 Min. logging 
 byte    AverageValue=               1; //Read 0 values to average, Default none. Steps 0,5,20,85
 byte    SampleSpeed=                0; //Loop delay 0,5,10,20
+byte    PitchStep=                  0; //Disables or enables Pitch step feature
 byte    Display=                    0;
 
 struct SettingsObj {
@@ -407,16 +411,18 @@ struct SettingsObj {
   byte Display;
   byte AverageValue;
   byte SampleSpeed;
+  byte PitchStep;
 };  
 
 #ifndef SPEECH  
   word    DispUpdTime=            1000; //1 sec Screen update 
-  char    *DisplayType[]= {"None", "Value",  "Bar"};
-  char    *WaveShapes[]=  {"Sine", "Triangle", "Square"};
-  char    *YesNoArr[]=    {"N", "Y"};
-  char    *LoggingModes[]={"Off", "On", "Play"};
-  char    *AvgModes[]=    {"Disable", "Low", "Medium", "Maximal"};
-  char    *SampleModes[]= {"Fast", "Medium", "Slow", "Slowest"};
+  char    *DisplayType[]=       {"None", "Value",  "Bar"};
+  char    *WaveShapes[]=        {"Sine", "Triangle", "Square"};
+  char    *YesNoArr[]=          {"N", "Y"};
+  char    *LoggingModes[]=      {"Off", "On", "Play"};
+  char    *AvgModes[]=          {"Disable", "Low", "Medium", "Maximal"};
+  char    *SampleModes[]=       {"Fast", "Medium", "Slow", "Slowest"};
+  char    *EnableDisableArr[]=  {"Disable","Enable"};
   long    PrevDispTime;
 #endif
 
@@ -449,7 +455,8 @@ void WriteConfig() {
     MP3Volume,
     Display,
     AverageValue,
-    SampleSpeed
+    SampleSpeed,
+    PitchStep,
   };  
   EEPROM.put(1, CurSettings);
   #ifdef SPEECH
@@ -475,6 +482,7 @@ void ReadConfig() {
   Display= CurSettings.Display;
   AverageValue= CurSettings.AverageValue;
   SampleSpeed= CurSettings.SampleSpeed;
+  PitchStep= CurSettings.PitchStep;
   #ifdef SPEECH
      PlaySound(ReadConfigMP3,4);
   #else   
@@ -1231,6 +1239,14 @@ byte ReadKey() {
     }
     Esc= false;
     while (!Esc) {
+      ShowLCD("Pitch Step: "+(String)YesNoArr[PitchStep], 1, true);
+      delay(300);
+      if (KeyVal() == Down)   if (PitchStep > 0) PitchStep--;
+      if (KeyVal() == Up)     if (PitchStep < 1) PitchStep++;
+      if (KeyVal() == Select) Esc= true;
+    }    
+    Esc= false;  
+    while (!Esc) {
       ShowLCD("Logging: "+(String)LoggingModes[LogMode], 1, true);
       delay(300);
       if (KeyVal() == Down)   if (LogMode > 0) LogMode--;
@@ -1278,7 +1294,7 @@ void setup() {
   PrevLogTime= millis();
   LowestReading= MaxValue;
   WarningReading= MinValue;
- #ifdef SPEECH
+  #ifdef SPEECH
     mySerial.begin(9600);
     delay(500);//Wait chip initialization is complete
     SendMP3Command(CMD_SEL_DEV, DEV_TF);//select the TF card  
@@ -1326,7 +1342,7 @@ void loop() {
   }else if (Reading < MaxValue) {
      if (PitchRev) AudioTone= fscale(MinValue,MaxValue,LowTone,HighTone,Reading,Curve);
      else AudioTone= fscale(MinValue,MaxValue,HighTone,LowTone,Reading,Curve);
-     //if (AudioTone > (HighTone-300)) AudioTone= AudioTone+300; //Test for John
+     if (PitchStep) { if (AudioTone > (HighTone-PitchStepValue)) AudioTone= AudioTone+PitchStepValue; }//PitchStep around the 8 on the target card.
      PlayTone(AudioTone,0);
      if (LogMode) WriteLog(Reading);
   }else if (Reading < (MaxValue+ThresholdWindow)) {
