@@ -295,7 +295,8 @@ To Do:
    #define SlowestMP3                          64
    #define LowPitchSetAtMP3                    65
    #define HighPitchSetAtMP3                   66
-   #define HertzMP3                            67   
+   #define HertzMP3                            67
+   #define SetPitchStepMP3                     68   
 
    #define HelpSetMinimalSensorValueMP3       123  
    #define HelpSetMaximalSensorValueMP3       122  
@@ -311,6 +312,7 @@ To Do:
    #define HelpSetSensorAverageCountMP3       151  
    #define HelpSetAlwaysSoundMP3              143  
    #define HelpRestoreFactorySettingsMP3      118
+   #define HelpSetPitchStepMP3                168 
     
    #define Key1Pin                              4
    #define Key2Pin                              2
@@ -1379,4 +1381,5 @@ void loop() {
     LoopCounter++;
   #endif  
 }
+
 
