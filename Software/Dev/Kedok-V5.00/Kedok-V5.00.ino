@@ -55,6 +55,7 @@ To Do:
  Beginners mode, wide window
  Test PitchStep feature
  Set Hightone default 300 lower if Pitchstep is enabled
+ //Changed MoveSensorWindowStepSize from 10 to 5 if shooter presses UP Or Down while shooting 
  //Added PitchStep feature
  //UP and Down buttons, Speedup
  //Rename Treshhold to Lead in
@@ -296,7 +297,9 @@ To Do:
    #define LowPitchSetAtMP3                    65
    #define HighPitchSetAtMP3                   66
    #define HertzMP3                            67
-   #define SetPitchStepMP3                     68   
+   #define SetPitchStepMP3                     68 
+   #define PitchStepEnabledMP3                 69
+   #define PitchStepDisabledMP3                70  
 
    #define HelpSetMinimalSensorValueMP3       123  
    #define HelpSetMaximalSensorValueMP3       122  
@@ -386,7 +389,8 @@ byte    PitchRev=               false;
 word    AutoAdjustWindow=         200; // Normal card size
 byte    ThresholdWindow=          150; 
 byte    GetReadyTime=              20; // 20 Seconds
-word    PitchStepValue=           300; // Around the 8
+word    PitchStepValue=           300; // Around the 8 on target card
+word    MoveSensorWindowStepSize=   5; // In/Dec MoveWindow steps if Up or Down is pressed  //Make constant?? !!!
 byte    LogMode=                    0;
 word    LogCounter=                 0;
 byte    MP3Volume=                 25;
@@ -763,7 +767,7 @@ void AutoAdjust() {
   #ifdef SPEECH
      PlaySound(CalibratedAtMP3,3);
      PlayNumber(MinValue, 0);
-     PlaySound(AutoAdjustFinishedMP3,3);
+     PlaySound(AutoAdjustFinishedMP3,4);
      PlaySound(HaveFunShootingMP3,4);
   #else
     lcd.clear();
@@ -866,7 +870,8 @@ byte ReadKey() {
       case 10: PlaySound(HelpSetTimeToGetReadyMP3,10); break;
       case 11: PlaySound(HelpSetSensorAverageCountMP3 ,9); break;
       case 12: PlaySound(HelpSetSampleSpeedMP3 ,8); break;
-      case 13: PlaySound(HelpRestoreFactorySettingsMP3,8); break;
+      case 13: PlaySound(HelpSetPitchStepMP3,12); break;
+      case 14: PlaySound(HelpRestoreFactorySettingsMP3,10); break;
     }  
   }
 
@@ -905,11 +910,12 @@ byte ReadKey() {
         case  9: PlaySound(SetAutoAdjustWindowMP3,8); break;
         case 10: PlaySound(SetTimeToGetReadyMP3,8); break;
         case 11: PlaySound(SetSensorAverageCountMP3 ,8); break;
-        case 12: PlaySound(SetSampleSpeedMP3 ,8); break;
-        case 13: PlaySound(RestoreFactorySettingsMP3,8); break;                
+        case 12: PlaySound(SetSampleSpeedMP3,8); break;
+        case 13: PlaySound(SetPitchStepMP3,8); break;
+        case 14: PlaySound(RestoreFactorySettingsMP3,8); break;                
       } 
       //Serial.println("Option Nr: "+String(OptionNr)); 
-      if (KeyVal() == Up)       if (OptionNr < 13) OptionNr+= 1;
+      if (KeyVal() == Up)       if (OptionNr < 14) OptionNr+= 1;
       if (KeyVal() == Down)     if (OptionNr >  0) OptionNr-= 1;
       if (KeyVal() == Select)   Esc= true; 
       if (KeyVal() == Right)    PlayHelp(OptionNr);     
@@ -1043,8 +1049,17 @@ byte ReadKey() {
                  if (KeyVal() == Right)  PlayHelp(OptionNr); 
                  if (KeyVal() == Select) Esc= true;
               }
-              break;  
+              break; 
      case 13: Esc= false;
+              while (!Esc) {
+                 if (PitchStep) PlaySound(PitchStepEnabledMP3,4); else PlaySound(PitchStepDisabledMP3,4); 
+                 if (KeyVal() == Up)      if (PitchStep < 1) PitchStep++;
+                 if (KeyVal() == Down)    if (PitchStep > 0) PitchStep--;
+                 if (KeyVal() == Right)   PlayHelp(OptionNr); 
+                 if (KeyVal() == Select)  Esc= true;
+              }
+              break;          
+     case 14: Esc= false;
               boolean SetToDefaults= false; 
               while (!Esc) {
                 if (SetToDefaults) PlaySound(RestoreFactoryDefaultsEnabledMP3,4); else PlaySound(RestoreFactoryDefaultsDisabledMP3,4); 
@@ -1360,8 +1375,8 @@ void loop() {
     if (KeyPressed) {  
       if (KeyPressed == Select)    Menu();
       if (KeyPressed == Right)     AutoAdjust();
-      if (KeyPressed == Down)      MoveSensorWindow(-10);
-      if (KeyPressed == Up)        MoveSensorWindow(+10);
+      if (KeyPressed == Down)      MoveSensorWindow(0-MoveSensorWindowStepSize);
+      if (KeyPressed == Up)        MoveSensorWindow(MoveSensorWindowStepSize);
       //ToDo add more
     }
   #else
@@ -1371,9 +1386,9 @@ void loop() {
       if (KeyPressed == Right)     LowestReading= MaxValue;
       if (KeyPressed == RightLong) AutoAdjust();
       if (KeyPressed == Left)      if (Display) Screen(Disable); else Screen(Enable);
-      if (KeyPressed == Down)      MoveSensorWindow(-10);
+      if (KeyPressed == Down)      MoveSensorWindow(0-MoveSensorWindowStepSize);
       if (KeyPressed == DownLong)  MoveSensorWindowToLowestRead();
-      if (KeyPressed == Up)        MoveSensorWindow(+10);
+      if (KeyPressed == Up)        MoveSensorWindow(MoveSensorWindowStepSize);
     }  
   #endif
   if (SampleSpeed) delay((1 << SampleSpeed-1)*5); //0,5,10,20  
