@@ -9,11 +9,11 @@ __asm volatile ("nop");
 //#define DEBUG-SPEECH  //Give debug info over serial port if you compile a Kedok speech version
 
 const   char      Version[5]="5.02";
-const   char      Owner[16]= "Demo";
+const   char      Owner[16]= "DEMO";
 const   char      SerialNr[23]=  "";
 
 #ifdef SPEECH
-   word    MP3Language=       0X0200; //0X0100 English 0X0200 Dutch
+   word    MP3Language=       0X0100; //0X0100 English 0X0200 Dutch
 #endif
 //=================================================================================================================
 
@@ -55,6 +55,9 @@ To Do:
  Beginners mode, wide window
  Test PitchStep feature
  Set Hightone default 300 lower if Pitchstep is enabled
+ Remove Log option, it is never used.
+ Add change owner name with buttons.
+ Smoothing filter, Exponential Filter. filter.h
  //Changed MoveSensorWindowStepSize from 10 to 5 if shooter presses UP Or Down while shooting 
  //Added PitchStep feature
  //UP and Down buttons, Speedup
@@ -202,6 +205,7 @@ To Do:
 
 
 ////////////////////////////////////////////
+#include <FilterExp.h>
 #ifdef SPEECH
   #include <SoftwareSerial.h>
 #else
