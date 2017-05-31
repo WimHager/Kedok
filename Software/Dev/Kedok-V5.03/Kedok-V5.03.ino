@@ -3,12 +3,13 @@ __asm volatile ("nop");
 #endif
 
 //====================================Compiler options=============================================================
-#define DEBUG-LCD     //Show Debug on LCD screen. Enables debug info on LCD screen, only with LCD 
+//#define DEBUG-LCD     //Show Debug on LCD screen. Enables debug info on LCD screen, only with LCD 
 //#define DDS9833       //Enable for a Kedok version with a DDS module. Disable for TTL output (DDS only with LCD)
-//#define SPEECH        //Enable if you compile a Kedok speech version. Disable for LCD
-//#define DEBUG-SPEECH  //Give debug info over serial port if you compile a Kedok speech version
+#define SPEECH        //Enable if you compile a Kedok speech version. Disable for LCD
+#define DEBUG-SPEECH  //Give debug info over serial port if you compile a Kedok speech version
+#define MEMBRANE-FIVE //Enable if  1 x 5 membrane keypad is used. Disabled if you use 1 x 4 keypad only for Speech!!
 
-const   char      Version[5]="5.02";
+const   char      Version[5]="5.03";
 const   char      Owner[16]= "DEMO";
 const   char      SerialNr[23]=  "";
 
@@ -58,6 +59,7 @@ To Do:
  Remove Log option, it is never used.
  Add change owner name with buttons.
  Smoothing filter, Exponential Filter. filter.h
+ Bug LowReadWarning()  must say lower sensor value
  //Changed MoveSensorWindowStepSize from 10 to 5 if shooter presses UP Or Down while shooting 
  //Added PitchStep feature
  //UP and Down buttons, Speedup
@@ -320,11 +322,19 @@ To Do:
    #define HelpSetAlwaysSoundMP3              143  
    #define HelpRestoreFactorySettingsMP3      118
    #define HelpSetPitchStepMP3                168 
-    
-   #define Key1Pin                              4
-   #define Key2Pin                              2
-   #define Key3Pin                              5
-   #define Key4Pin                              3
+   #ifdef MEMBRANE-FIVE // 1 x 5 Membrane Keypad
+     #define Key1Pin                            2
+     #define Key2Pin                            3
+     #define Key3Pin                            4
+     #define Key4Pin                            6
+     #define Key5Pin                            5   
+   #else  // 1 x 4 Membrane Keypad
+     #define Key1Pin                            4
+     #define Key2Pin                            2
+     #define Key3Pin                            5
+     #define Key4Pin                            3
+     #define Key5Pin                            6
+   #endif  
    SoftwareSerial mySerial(ARDUINO_RX, ARDUINO_TX);
    static int8_t     Send_buf[8]= {0};
 #else
@@ -617,6 +627,7 @@ void LowReadWarning() {
       if (!Display) ShowStatusLCD();
     #else  
       Beep(3,300);
+      //Say play 15
     #endif  
 }  
 
@@ -802,6 +813,7 @@ byte ReadKey() {
     pinMode(Key2Pin,INPUT_PULLUP);
     pinMode(Key3Pin,INPUT_PULLUP);
     pinMode(Key4Pin,INPUT_PULLUP);
+    pinMode(Key5Pin,INPUT_PULLUP);
   }
  
   byte DelaySecIntr(word Time, boolean Intr) {
@@ -881,11 +893,12 @@ byte ReadKey() {
 
   byte KeyVal() {
     #ifdef DEBUG-SPEECH
-       Serial.print("Key: ");
-       if (!digitalRead(Key1Pin)) Serial.println("Select"); 
-       if (!digitalRead(Key1Pin)) Serial.println("Down");
-       if (!digitalRead(Key1Pin)) Serial.println("Up");
-       if (!digitalRead(Key1Pin)) Serial.println("Right");
+       //Serial.print("Key: ");
+       if (!digitalRead(Key1Pin)) Serial.println("Key: Select"); 
+       if (!digitalRead(Key2Pin)) Serial.println("Key: Down");
+       if (!digitalRead(Key3Pin)) Serial.println("Key: Up");
+       if (!digitalRead(Key4Pin)) Serial.println("Key: Right");
+       if (!digitalRead(Key5Pin)) Serial.println("Key: Left");
     #endif
     if (!digitalRead(Key1Pin)) {PlayTone(1000,20); return Select;}
     if (!digitalRead(Key2Pin)) {PlayTone(1000,20); return Down;}
