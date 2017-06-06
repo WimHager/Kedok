@@ -9,8 +9,7 @@ const   char      Version[5]="6.00";
 const   char      Owner[16]= "DEMO";
 const   char      SerialNr[23]=  "";
 
-
-   word    MP3Language=       0X0100; //0X0100 English 0X0200 Dutch
+word    MP3Language=       0X0100; //0X0100 English 0X0200 Dutch
 
 //=================================================================================================================
 
@@ -38,14 +37,9 @@ To Do:
 
  Battery level check?
  Start to add a i2c ADS1015 12-Bit ADC - 4 Channel 
- ShowLCD bug. no clear
  Reset all if version updated
  Better Auto adjust
  Full test of Curve parameter
- Triangle wave still gives a beep when fequency is set to zero,
-          Buggy at B28 Setting, needs a full test.
- Full test if without DDS module
- Always Sound does not work if DDS connected.
  Add an option to escape the menu without saving
  Add option to save users presets
  Change delay's in speech, some are utterly slow alo improve saying values (remove "value is" in some cases) 
@@ -56,7 +50,12 @@ To Do:
  Add change owner name with buttons.
  Smoothing filter, Exponential Filter. filter.h
  Bug LowReadWarning()  must say lower sensor value
- Adding new 1 x 5 membrane Keypad speech version
+ //ShowLCD bug. no clear
+ //Always Sound does not work if DDS connected.
+ //Triangle wave still gives a beep when fequency is set to zero,
+ //Buggy at B28 Setting, needs a full test.
+ //Full test if without DDS module
+ //Adding new 1 x 5 membrane Keypad speech version
  //Changed MoveSensorWindowStepSize from 10 to 5 if shooter presses UP Or Down while shooting 
  //Added PitchStep feature
  //UP and Down buttons, Speedup
@@ -136,11 +135,7 @@ To Do:
 
 //Note Audio pin 3 or 10. 82 Ohm and 470N in serie
 //Opto resistor 68K
-//Loops DDS FAST:     1200
-//      DDS MEDIUM:    173
-//      DDS SLOW:       93
-//      DDS SLOWEST     45
-//      TTL FAST:
+//Loops TTL FAST:
 //      TTL MEDIUM:
 //      TTL SLOW: 
 //      TTL SLOWEST: 
@@ -150,9 +145,9 @@ To Do:
   To Pot volume
        ^
        |
-      ---              To Keyboard
-      | | 1K2               ^
-      | |                   |
+      ---             To Keyboard
+      | | 1K2              ^
+      | |                  |
       ---           ---------------
        |            |             |
        |            |             |                    
@@ -167,10 +162,11 @@ To Do:
                   A3             VCC   GND
 [0][0][0][0][0][0][X][X][x][0][0][X][0][X][0]
                    |  |  |        |     |              |--> To Charger GND
-                   |             ---    ---------------|
-                   v             | |                   |--> To Sensor Jack
-                                 v v
-              To Sensor jack     To Charger To Sensor jack
+  Sensor jack <----   |  |       ---    ---------------|
+                      |  |       | |                   |--> To Sensor Jack
+                      v  v       v v
+            Display SDA SDC      To Charger, Sensor jack , Display
+                                
 */
 
 ////////////////////////////////////////////
@@ -293,7 +289,6 @@ SSD1306AsciiAvrI2c oled;
 SoftwareSerial mySerial(ARDUINO_RX, ARDUINO_TX);
 static int8_t     Send_buf[8]= {0};
 
-
 byte    AudioPin=               10;
 byte    SensorPin=              A3;
 
@@ -309,11 +304,11 @@ const  byte Down=                 3;
 const  byte Up=                   2;
 const  byte Right=                4;
 const  byte Left=                 5;
-const   byte      Value=          1;
-const   byte      Bar=            2;
-const   boolean   Disable=     true;
-const   boolean   Enable=     false;
-const   char      EmptyLine[17]=  "                ";
+const  byte       Value=          1;
+const  byte       Bar=            2;
+const  boolean    Disable=     true;
+const  boolean    Enable=     false;
+const  char       EmptyLine[17]=  "                ";
 
 word    MinValue=               100;
 word    MaxValue=               800;
@@ -492,7 +487,6 @@ void LowReadWarning() {
     WarningReading= Reading;
       Beep(3,300);
       //Say play sound 15
-
 }  
 
 String WordToStr(word Inp, byte Size) {
@@ -540,7 +534,6 @@ void MoveSensorWindow(int Val) {
 
   WriteConfig();
   delay(500);
-  
 }  
 
 void MoveSensorWindowToLowestRead() {
@@ -552,7 +545,6 @@ void MoveSensorWindowToLowestRead() {
     //Maybe say settings  
   WriteConfig();
   delay(3000);
- 
 }  
 
 void EEPromClear() {
@@ -634,14 +626,13 @@ byte ReadKey() {
   return Key;
 }  
 
-
-  void InitKeyPad() {
-    pinMode(Key1Pin,INPUT_PULLUP);
-    pinMode(Key2Pin,INPUT_PULLUP);
-    pinMode(Key3Pin,INPUT_PULLUP);
-    pinMode(Key4Pin,INPUT_PULLUP);
-    pinMode(Key5Pin,INPUT_PULLUP);
-  }
+void InitKeyPad() {
+  pinMode(Key1Pin,INPUT_PULLUP);
+  pinMode(Key2Pin,INPUT_PULLUP);
+  pinMode(Key3Pin,INPUT_PULLUP);
+  pinMode(Key4Pin,INPUT_PULLUP);
+  pinMode(Key5Pin,INPUT_PULLUP);
+}
  
   byte DelaySecIntr(word Time, boolean Intr) {
     byte KeyPressed;
@@ -789,9 +780,9 @@ byte ReadKey() {
     switch(OptionNr) {
       case 0: Esc= false;
               while (!Esc) {
-                 #ifdef OLED
+                 
                     ShowOLED("Volume: "+(String)MP3Volume, 0,4,1);
-                 #endif
+ 
                  PlayNumber(MP3Volume, 1);
                  if (KeyVal() == Up)       if (MP3Volume < 30) MP3Volume+= 1;
                  if (KeyVal() == Down)     if (MP3Volume >  5) MP3Volume-= 1;
@@ -803,9 +794,9 @@ byte ReadKey() {
               break;
       case 1: Esc= false;
               while (!Esc) {
-                 #ifdef OLED
+                 
                     ShowOLED("Min. Sensor: "+(String)MinValue, 0,4,1);
-                 #endif
+
                  PlayNumber(MinValue, 1);
                  if (KeyVal() == Up)       if (MinValue < (MaxValue-20)) MinValue+= 5;
                  if (KeyVal() == Down)     if (MinValue > 10) MinValue-= 5;
@@ -816,9 +807,9 @@ byte ReadKey() {
               break;
       case 2: Esc= false;
               while (!Esc) {
-                 #ifdef OLED
+                 
                     ShowOLED("Max. Sensor: "+(String)MaxValue, 0,4,1);
-                 #endif
+
                  PlayNumber(MaxValue, 1);
                  if (KeyVal() == Up)       if (MaxValue < 990) MaxValue+= 5;
                  if (KeyVal() == Down)     if (MaxValue > (MinValue+20)) MaxValue-= 5;
@@ -829,9 +820,9 @@ byte ReadKey() {
               break;
       case 3: Esc= false;
               while (!Esc) {
-                 #ifdef OLED
+                 
                     ShowOLED("Threshold: "+(String)ThresholdWindow, 0,4,1);
-                 #endif
+
                  PlayNumber(ThresholdWindow, 1);
                  if (KeyVal() == Up)       if (ThresholdWindow < 190) ThresholdWindow+= 10;
                  if (KeyVal() == Down)     if (ThresholdWindow > 10)  ThresholdWindow-= 10;
@@ -842,9 +833,9 @@ byte ReadKey() {
               break;     
       case 4: Esc= false;
               while (!Esc) {
-                 #ifdef OLED
+                 
                     ShowOLED("Pitch Curve: "+(String)Curve, 0,4,1);
-                 #endif
+
                  PlayNumber(Curve, 1);
                  if (KeyVal() == Up)       if (Curve < 5) Curve++;
                  if (KeyVal() == Down)     if (Curve > 0) Curve--;
@@ -875,9 +866,9 @@ byte ReadKey() {
               break;
       case 7: Esc= false;
               while (!Esc) {
-                 #ifdef OLED
+                 
                     ShowOLED("Lo Pitch: "+(String)LowTone+" Hz", 0,4,1);
-                 #endif
+
                  PlayTone(LowTone,0);
                  delay(300);
                  if (KeyVal() == Down)     if (LowTone > 50) LowTone-= 50;
@@ -890,9 +881,9 @@ byte ReadKey() {
               break;    
       case 8: Esc= false;
               while (!Esc) {
-                 #ifdef OLED
+                 
                     ShowOLED("Hi Pitch: "+(String)HighTone+" Hz", 0,4,1);
-                 #endif
+
                  PlayTone(HighTone,0);
                  delay(300);
                  if (KeyVal() == Down)     if (HighTone > (LowTone+100)) HighTone-= 50;
@@ -905,9 +896,9 @@ byte ReadKey() {
               break;  
       case 9: Esc= false;
               while (!Esc) {
-                #ifdef OLED
+                
                     ShowOLED("Auto adj. window: "+(String)AutoAdjustWindow, 0,4,1);
-                 #endif
+
                  PlayNumber(AutoAdjustWindow, 1);
                  if (KeyVal() == Down)     if (AutoAdjustWindow > 50)   AutoAdjustWindow-= 10;
                  if (KeyVal() == Up)       if (AutoAdjustWindow < 300)  AutoAdjustWindow+= 10;
@@ -918,9 +909,9 @@ byte ReadKey() {
               break;
      case 10: Esc= false;
               while (!Esc) {
-                 #ifdef OLED
+                 
                     ShowOLED("Get ready time: "+(String)GetReadyTime+" s.", 0,4,1);
-                 #endif
+
                  PlayNumber(GetReadyTime, 1);
                  if (KeyVal() == Down)     if (GetReadyTime > 2)       GetReadyTime-= 1;
                  if (KeyVal() == Up)       if (GetReadyTime < 20)      GetReadyTime+= 1;
@@ -931,9 +922,9 @@ byte ReadKey() {
               break;             
      case 11: Esc= false;
               while (!Esc) {
-                #ifdef OLED
+                
                     ShowOLED("Averaging: "+(String)AvgModes[AverageValue], 0,4,1);
-                 #endif
+
                  if (AverageValue == 0)    PlaySound(DisableMP3,4); //beter uitleg? disabled als niet actief?
                  if (AverageValue == 1)    PlaySound(LowMP3,4);
                  if (AverageValue == 2)    PlaySound(MediumMP3,4); 
@@ -947,9 +938,9 @@ byte ReadKey() {
               break;
      case 12: Esc= false;
               while (!Esc) {
-                 #ifdef OLED
+                 
                     ShowOLED("Speed: "+(String)SampleModes[SampleSpeed], 0,4,1);
-                 #endif
+
                  if (SampleSpeed == 0)     PlaySound(FastMP3,4);
                  if (SampleSpeed == 1)     PlaySound(MediumMP3,4); 
                  if (SampleSpeed == 2)     PlaySound(SlowMP3,4);
@@ -963,9 +954,9 @@ byte ReadKey() {
               break; 
      case 13: Esc= false;
               while (!Esc) {
-                #ifdef OLED
+                
                     ShowOLED("Pitch step: "+(String)YesNoArr[PitchStep], 0,4,1);
-                 #endif
+
                  if (PitchStep) PlaySound(PitchStepEnabledMP3,4); else PlaySound(PitchStepDisabledMP3,4); 
                  if (KeyVal() == Up)       if (PitchStep < 1) PitchStep++;
                  if (KeyVal() == Down)     if (PitchStep > 0) PitchStep--;
@@ -977,9 +968,9 @@ byte ReadKey() {
      case 14: Esc= false;
               boolean SetToDefaults= false; 
               while (!Esc) {
-                 #ifdef OLED
+                 
                     ShowOLED("Factory reset: "+(String)YesNoArr[SetToDefaults], 0,4,1);
-                 #endif
+
                  if (SetToDefaults) PlaySound(RestoreFactoryDefaultsEnabledMP3,4); else PlaySound(RestoreFactoryDefaultsDisabledMP3,4); 
                  if (KeyVal() == Up)        if (SetToDefaults < 1) SetToDefaults= true;
                  if (KeyVal() == Down)      if (SetToDefaults > 0) SetToDefaults= false;
