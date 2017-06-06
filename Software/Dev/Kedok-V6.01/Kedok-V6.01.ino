@@ -3,21 +3,15 @@ __asm volatile ("nop");
 #endif
 
 //====================================Compiler options=============================================================
-//#define DEBUG-LCD     //Show Debug on LCD screen. Enables debug info on LCD screen, only with LCD 
-//#define DDS9833       //Enable for a Kedok version with a DDS module. Disable for TTL output (DDS only with LCD)
-#define SPEECH        //Enable if you compile a Kedok speech version. Disable for LCD
-#define OLED          //Enable O-LED i2c 128x64 only used for Speech
 #define DEBUG-SPEECH  //Give debug info over serial port if you compile a Kedok speech version
-#define MEMBRANE-1X5 //Enable if  1 x 5 membrane keypad is used. Disabled if you use 1 x 4 keypad. Only for Speech!!
-
 
 const   char      Version[5]="6.00";
 const   char      Owner[16]= "DEMO";
 const   char      SerialNr[23]=  "";
 
-#ifdef SPEECH
+
    word    MP3Language=       0X0100; //0X0100 English 0X0200 Dutch
-#endif
+
 //=================================================================================================================
 
 /*
@@ -157,11 +151,11 @@ To Do:
        ^
        |
       ---              To Keyboard
-      | | 5K6               ^
+      | | 1K2               ^
       | |                   |
-      ---              -----------
-       |              |           |
-       |              |           |                    
+      ---           ---------------
+       |            |             |
+       |            |             |                    
 [0][0][X][0][0][0][X][X][X][X][X][X][0][0][0]
       D10          D6 D5 D4 D3 D2 GND
 
@@ -171,245 +165,167 @@ To Do:
 
 
                   A3             VCC   GND
-[0][0][0][0][0][0][X][0][0][0][0][X][0][X][0]
-                   |              |     |              |--> To Charger GND
+[0][0][0][0][0][0][X][X][x][0][0][X][0][X][0]
+                   |  |  |        |     |              |--> To Charger GND
                    |             ---    ---------------|
                    v             | |                   |--> To Sensor Jack
                                  v v
               To Sensor jack     To Charger To Sensor jack
 */
 
-/* Lenoardo LCD =====================================================================================
-
-                                        To Pot volume
-                                             ^
-                                             |
-                                            ---             
-                                            | | 5K6           
-                                            | |               
-                                            ---         
-                                             |             
-                                             |    
-[0][0][0][0][0][0][0][0][0][0]  [0][0][0][0][X][0][0][0]
-                                            D3
-
-
-                                             GND <---[0][0]
-                                                     [0][0]       
-                                             VCC <---[0][0]
-
-
-
-                       +5  Gnd        A0 A1 A2 A3
-           [0][0][0][0][X][X][X][0]   [0][X][0][0][0][0]
-                        |                 |
-                        |                 |
-                        v To Charger      v To Sensor jack
-
-*/
-
-
 ////////////////////////////////////////////
 
-#ifdef OLED
-  #define I2C_ADDRESS 0x3C
-  #include "SSD1306Ascii.h"
-  #include "SSD1306AsciiAvrI2c.h"
-  SSD1306AsciiAvrI2c oled;
-#endif
-#ifdef SPEECH
-  #include <SoftwareSerial.h>
-#else
-  #include <LiquidCrystal.h>
-  #include <LcdBarGraph.h>
-#endif
-#ifdef DDS9833
-  #include <SPI.h>
-#else
-  #include <NewTone.h>
-#endif
+#define I2C_ADDRESS 0x3C
+#include "SSD1306Ascii.h"
+#include "SSD1306AsciiAvrI2c.h"
+SSD1306AsciiAvrI2c oled;
+#include <SoftwareSerial.h>
+#include <NewTone.h>
 #include <EEPROM.h>
 
-#ifdef SPEECH
-   #define ARDUINO_RX 11 //should connect to TX of the Serial MP3 Player module
-   #define ARDUINO_TX 12 //connect to RX of the module
-   #define CMD_SET_VOLUME 0X06
-   #define CMD_PLAY_W_INDEX 0X08
-   #define CMD_SEL_DEV 0X09
-   #define DEV_TF 0X02
-   #define CMD_PLAY 0X0D
-   #define CMD_PAUSE 0X0E
-   #define CMD_SINGLE_CYCLE 0X19
-   #define SINGLE_CYCLE_ON 0X00
-   #define SINGLE_CYCLE_OFF 0X01
-   #define CMD_PLAY_W_VOL 0X22
-   #define CMD_PLAY_FOLDER_FILE 0X0F
-   #define ZeroMP3                              0
-   #define OneMP3                               1
-   #define TwoMP3                               2
-   #define ThreeMP3                             3
-   #define FourMP3                              4
-   #define FiveMP3                              5
-   #define SixMP3                               6
-   #define SevenMP3                             7
-   #define EightMP3                             8
-   #define NineMP3                              9
-   #define YesMP3                              10
-   #define NoMP3                               16
-   #define EnableMP3                           14
-   #define DisableMP3                          13
-   #define WelcomeMP3                          31
-   #define SettingsMenuMP3                     28
-   #define UseArrowKeysMP3                     30
-   #define SetMinimalSensorValueMP3            23  
-   #define SetMaximalSensorValueMP3            22  
-   #define SetSensorThresholdValueMP3          25  
-   #define SetSoundCurveValueMP3               26  
-   #define SetPitchReverseMP3                  24  
-   #define SetLowestPitchMP3                   21  
-   #define SetHigestPitchMP3                   20  
-   #define SetAutoAdjustWindowMP3              19
-   #define SetTimeToGetReadyMP3                61 
-   #define SetSampleSpeedMP3                   59
-   #define SetVolumeMP3                        27 
-   #define SetAlwaysSoundMP3                   43
-   #define SetSensorAverageCountMP3            51         
-   #define RestoreFactorySettingsMP3           18
-   #define LowerMinimalSettingMP3              15
-   #define PrepareWeaponForAimingMP3           17
-   #define StartToAimNowMP3                    29
-   #define AutoAdjustFinishedMP3               12
-   #define CountDownFrom20MP3                  11
-   #define SelectTheOptionMP3                  32
-   #define ExitOptionsMenuMP3                  33
-   #define DataSettingsSavedMP3                34
-   #define TheValueIsMP3                       35
-   #define PitchReverseDisabledMP3             37
-   #define PitchReverseEnabledMP3              36
-   #define AlwaysSoundEnabledMP3               38
-   #define AlwaysSoundDisabledMP3              39
-   #define AllSettingsResetToDefaultsMP3       40
-   #define RestoreFactoryDefaultsDisabledMP3   41
-   #define RestoreFactoryDefaultsEnabledMP3    42
-   #define SettingsAreSavedMP3                 44
-   #define LoggingStoppedMP3                   45 
-   #define AutoAdjustStartedMP3                46
-   #define ReadConfigMP3                       47
-   #define HaveFunShootingMP3                  48
-   #define SensorReducedMP3                    49
-   #define SensorIncreasedMP3                  50 
-   #define LowMP3                              52
-   #define AverageMP3                          53
-   #define HighMP3                             54
-   #define CalibrationLevelToHighMP3           55
-   #define CalibratedAtMP3                     56
-   #define AutoAdjustGetReadyMP3               57
-   #define MaximalMP3                          58
-   #define FastMP3                             60
-   #define SlowMP3                             62
-   #define MediumMP3                           63
-   #define SlowestMP3                          64
-   #define LowPitchSetAtMP3                    65
-   #define HighPitchSetAtMP3                   66
-   #define HertzMP3                            67
-   #define SetPitchStepMP3                     68 
-   #define PitchStepEnabledMP3                 69
-   #define PitchStepDisabledMP3                70  
 
-   #define HelpSetMinimalSensorValueMP3       123  
-   #define HelpSetMaximalSensorValueMP3       122  
-   #define HelpSetSensorThresholdValueMP3     125  
-   #define HelpSetSoundCurveValueMP3          126  
-   #define HelpSetPitchReverseMP3             124  
-   #define HelpSetLowestPitchMP3              121  
-   #define HelpSetHigestPitchMP3              120  
-   #define HelpSetAutoAdjustWindowMP3         119
-   #define HelpSetTimeToGetReadyMP3           161 
-   #define HelpSetSampleSpeedMP3              159
-   #define HelpSetVolumeMP3                   127 
-   #define HelpSetSensorAverageCountMP3       151  
-   #define HelpSetAlwaysSoundMP3              143  
-   #define HelpRestoreFactorySettingsMP3      118
-   #define HelpSetPitchStepMP3                168 
-   #ifdef MEMBRANE-1X5 // 1 x 5 Membrane Keypad
-     #define Key1Pin                            2
-     #define Key2Pin                            3
-     #define Key3Pin                            4
-     #define Key4Pin                            6
-     #define Key5Pin                            5   
-   #else  // 1 x 4 Membrane Keypad
-     #define Key1Pin                            4
-     #define Key2Pin                            2
-     #define Key3Pin                            5
-     #define Key4Pin                            3
-     #define Key5Pin                            6
-   #endif  
-   SoftwareSerial mySerial(ARDUINO_RX, ARDUINO_TX);
-   static int8_t     Send_buf[8]= {0};
-#else
-   LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
-   LcdBarGraph   lbg(&lcd, 16, 0, 0);
-#endif   
+#define ARDUINO_RX 11 //should connect to TX of the Serial MP3 Player module
+#define ARDUINO_TX 12 //connect to RX of the module
+#define CMD_SET_VOLUME 0X06
+#define CMD_PLAY_W_INDEX 0X08
+#define CMD_SEL_DEV 0X09
+#define DEV_TF 0X02
+#define CMD_PLAY 0X0D
+#define CMD_PAUSE 0X0E
+#define CMD_SINGLE_CYCLE 0X19
+#define SINGLE_CYCLE_ON 0X00
+#define SINGLE_CYCLE_OFF 0X01
+#define CMD_PLAY_W_VOL 0X22
+#define CMD_PLAY_FOLDER_FILE 0X0F
+#define ZeroMP3                              0
+#define OneMP3                               1
+#define TwoMP3                               2
+#define ThreeMP3                             3
+#define FourMP3                              4
+#define FiveMP3                              5
+#define SixMP3                               6
+#define SevenMP3                             7
+#define EightMP3                             8
+#define NineMP3                              9
+#define YesMP3                              10
+#define NoMP3                               16
+#define EnableMP3                           14
+#define DisableMP3                          13
+#define WelcomeMP3                          31
+#define SettingsMenuMP3                     28
+#define UseArrowKeysMP3                     30
+#define SetMinimalSensorValueMP3            23  
+#define SetMaximalSensorValueMP3            22  
+#define SetSensorThresholdValueMP3          25  
+#define SetSoundCurveValueMP3               26  
+#define SetPitchReverseMP3                  24  
+#define SetLowestPitchMP3                   21  
+#define SetHigestPitchMP3                   20  
+#define SetAutoAdjustWindowMP3              19
+#define SetTimeToGetReadyMP3                61 
+#define SetSampleSpeedMP3                   59
+#define SetVolumeMP3                        27 
+#define SetAlwaysSoundMP3                   43
+#define SetSensorAverageCountMP3            51         
+#define RestoreFactorySettingsMP3           18
+#define LowerMinimalSettingMP3              15
+#define PrepareWeaponForAimingMP3           17
+#define StartToAimNowMP3                    29
+#define AutoAdjustFinishedMP3               12
+#define CountDownFrom20MP3                  11
+#define SelectTheOptionMP3                  32
+#define ExitOptionsMenuMP3                  33
+#define DataSettingsSavedMP3                34
+#define TheValueIsMP3                       35
+#define PitchReverseDisabledMP3             37
+#define PitchReverseEnabledMP3              36
+#define AlwaysSoundEnabledMP3               38
+#define AlwaysSoundDisabledMP3              39
+#define AllSettingsResetToDefaultsMP3       40
+#define RestoreFactoryDefaultsDisabledMP3   41
+#define RestoreFactoryDefaultsEnabledMP3    42
+#define SettingsAreSavedMP3                 44
+#define LoggingStoppedMP3                   45 
+#define AutoAdjustStartedMP3                46
+#define ReadConfigMP3                       47
+#define HaveFunShootingMP3                  48
+#define SensorReducedMP3                    49
+#define SensorIncreasedMP3                  50 
+#define LowMP3                              52
+#define AverageMP3                          53
+#define HighMP3                             54
+#define CalibrationLevelToHighMP3           55
+#define CalibratedAtMP3                     56
+#define AutoAdjustGetReadyMP3               57
+#define MaximalMP3                          58
+#define FastMP3                             60
+#define SlowMP3                             62
+#define MediumMP3                           63
+#define SlowestMP3                          64
+#define LowPitchSetAtMP3                    65
+#define HighPitchSetAtMP3                   66
+#define HertzMP3                            67
+#define SetPitchStepMP3                     68 
+#define PitchStepEnabledMP3                 69
+#define PitchStepDisabledMP3                70  
 
-#ifdef SPEECH
-  byte    AudioPin=               10;
-  byte    SensorPin=              A3;
-#else
-  byte    AudioPin=                3;
-  byte    SensorPin=              A1;
-#endif 
-   
+#define HelpSetMinimalSensorValueMP3       123  
+#define HelpSetMaximalSensorValueMP3       122  
+#define HelpSetSensorThresholdValueMP3     125  
+#define HelpSetSoundCurveValueMP3          126  
+#define HelpSetPitchReverseMP3             124  
+#define HelpSetLowestPitchMP3              121  
+#define HelpSetHigestPitchMP3              120  
+#define HelpSetAutoAdjustWindowMP3         119
+#define HelpSetTimeToGetReadyMP3           161 
+#define HelpSetSampleSpeedMP3              159
+#define HelpSetVolumeMP3                   127 
+#define HelpSetSensorAverageCountMP3       151  
+#define HelpSetAlwaysSoundMP3              143  
+#define HelpRestoreFactorySettingsMP3      118
+#define HelpSetPitchStepMP3                168 
+
+#define Key1Pin                            2
+#define Key2Pin                            3
+#define Key3Pin                            4
+#define Key4Pin                            6
+#define Key5Pin                            5   
+SoftwareSerial mySerial(ARDUINO_RX, ARDUINO_TX);
+static int8_t     Send_buf[8]= {0};
+
+
+byte    AudioPin=               10;
+byte    SensorPin=              A3;
+
 int Melody[] = { 
   262, 196, 196, 220, 196, 0, 247, 262 };
 int NoteDurations[] = { 
   4, 8, 8, 4, 4, 4, 4, 4 };
   
-#ifdef SPEECH
-  const  byte None=                 0;
-  const  byte Select=               1;
-  const  byte Down=                 3;
-  const  byte Up=                   2;
-  const  byte Right=                4;
-  const  byte Left=                 5;
-#else
-  const   byte      None=           0; 
-  const   byte      Select=         1;
-  const   byte      Left=           2;
-  const   byte      Down=           3;
-  const   byte      DownLong=      13;
-  const   byte      Up=             4; 
-  const   byte      Right=          5;
-  const   byte      RightLong=     15;
-#endif 
-const   byte      Value=            1;
-const   byte      Bar=              2;
-const   boolean   Disable=       true;
-const   boolean   Enable=       false;
+
+const  byte None=                 0;
+const  byte Select=               1;
+const  byte Down=                 3;
+const  byte Up=                   2;
+const  byte Right=                4;
+const  byte Left=                 5;
+const   byte      Value=          1;
+const   byte      Bar=            2;
+const   boolean   Disable=     true;
+const   boolean   Enable=     false;
 const   char      EmptyLine[17]=  "                ";
 
-#ifdef DDS9833
-  const   int       FSyncPin=       2;            // AD9833 Chip select Pin
-  const   float     XTALFreq=  25.0E6;            // On-board X-TAL reference frequency.
-#endif  
+word    MinValue=               100;
+word    MaxValue=               800;
 
-word    MinValue=                 100;
-word    MaxValue=                 800;
-#ifdef DDS9833
-  word    LowTone=                150; 
-  word    HighTone=              2000;
-#else
-  word    LowTone=                100; 
-  word    HighTone=              1750;
-#endif
+word    LowTone=                100; 
+word    HighTone=              1750;
 
-byte    Curve=                      0;
-byte    WaveShape=                  0;
-byte    PitchRev=               false;
-#ifdef SPEECH
-  byte    AlwaysSound=           true; 
-#else
-  byte    AlwaysSound=          false; 
-#endif  
+byte    Curve=                    0;
+byte    WaveShape=                0;
+byte    PitchRev=             false;
+byte    AlwaysSound=          false; 
+  
 word    AutoAdjustWindow=         200; // Normal card size
 byte    ThresholdWindow=          150; 
 byte    GetReadyTime=              20; // 20 Seconds
@@ -444,17 +360,15 @@ struct SettingsObj {
   byte PitchStep;
 };  
 
-//#ifndef SPEECH  
-  word    DispUpdTime=            1000; //1 sec Screen update 
-  char    *DisplayType[]=       {"None", "Value",  "Bar"};
-  char    *WaveShapes[]=        {"Sine", "Triangle", "Square"};
-  char    *YesNoArr[]=          {"N", "Y"};
-  char    *LoggingModes[]=      {"Off", "On", "Play"};
-  char    *AvgModes[]=          {"Disable", "Low", "Medium", "Maximal"};
-  char    *SampleModes[]=       {"Fast", "Medium", "Slow", "Slowest"};
-  char    *EnableDisableArr[]=  {"Disable","Enable"};
-  long    PrevDispTime;
-//#endif
+word    DispUpdTime=            1000; //1 sec Screen update 
+char    *DisplayType[]=       {"None", "Value",  "Bar"};
+char    *WaveShapes[]=        {"Sine", "Triangle", "Square"};
+char    *YesNoArr[]=          {"N", "Y"};
+char    *LoggingModes[]=      {"Off", "On", "Play"};
+char    *AvgModes[]=          {"Disable", "Low", "Medium", "Maximal"};
+char    *SampleModes[]=       {"Fast", "Medium", "Slow", "Slowest"};
+char    *EnableDisableArr[]=  {"Disable","Enable"};
+long    PrevDispTime;
 
 long    PrevLogTime;
 word    Reading;
@@ -462,11 +376,6 @@ word    AudioTone;
 word    LowestReading;
 word    WarningReading;
 byte    KeyPressed;
-
-//Debug params
-#ifdef DEBUG
-word    LoopCounter; 
-#endif  
 
 void WriteConfig() {
   EEPROM.write(0,1);
@@ -514,12 +423,8 @@ void ReadConfig() {
   AverageValue= CurSettings.AverageValue;
   SampleSpeed= CurSettings.SampleSpeed;
   PitchStep= CurSettings.PitchStep;
-  #ifdef SPEECH
-     ShowOLED("Reading config..", 0,4,1);
-     PlaySound(ReadConfigMP3,4);
-  #else   
-    ShowLCD("Read Config...",0, true);
-  #endif 
+  ShowOLED("Reading config..", 0,4,1);
+  PlaySound(ReadConfigMP3,4);
 }
 
 float fscale( float originalMin, float originalMax, float newBegin, float newEnd, float inputValue, float Curve){
@@ -562,85 +467,32 @@ word ReadValue(word AvgVal) {
 }
 
 void PlayTone(word Tone, word Duration) {
-   #ifdef DDS9833
-     SetFrequency(Tone);
-     if (Duration != 0) {
-       delay(Duration);
-       SetFrequency(0);
-     }
-   #else
-     if (Tone == 0) noNewTone(AudioPin);
-     else NewTone(AudioPin, Tone, Duration);
-   #endif    
+   if (Tone == 0) noNewTone(AudioPin);
+   else NewTone(AudioPin, Tone, Duration);
 }
 
 void Beep(byte Beeps, word Pitch) {
   for (byte X=0; X<Beeps; X++) {
-    #ifdef DDS8933
-        PlayTone(AudioPin,Pitch,400);
-    #else
-        PlayTone(Pitch,200);
-    #endif        
-    delay(400);
+     PlayTone(Pitch,200);
+     delay(400);
   }
 }
 
 void PlayMelody() {
   for (int ThisNote= 0; ThisNote < 8; ThisNote++) {
     int NoteDuration = 1000/NoteDurations[ThisNote];
-    #ifdef DDS9833
-        PlayTone(Melody[ThisNote]*5, NoteDuration/2); // Play thisNote at full volume for noteDuration in the background.
-    #else
-        PlayTone(Melody[ThisNote], NoteDuration);   // Play thisNote at full volume for noteDuration in the background. 
-    #endif       
+    PlayTone(Melody[ThisNote], NoteDuration);   // Play thisNote at full volume for noteDuration in the background. 
     delay(NoteDuration * 4 / 3); // Wait while the tone plays in the background, plus another 33% delay between notes.
   }
 }
 
-#ifdef DDS9833
-  void AD9833reset() {
-    WriteToDDS(0x100);   // Write '1' to AD9833 Control register bit D8.
-    delay(50);
-  }
-
-  void SetFrequency(long Frequency) {   // Set AD8933 frequency and wave shape registers.
-    int Shape= 0x2000;                  // Sinus
-    if (WaveShape == 1) Shape= 0x2002;  // Triangle
-    if (WaveShape == 2) Shape= 0x2020;  // Square  
-    long FreqWord = (Frequency * pow(2, 28)) / XTALFreq;
-    int MSB = (int)((FreqWord & 0xFFFC000) >> 14);    //Only lower 14 bits are used for data
-    int LSB = (int)( FreqWord & 0x3FFF);
-    //Set control bits 15 ande 14 to 0 and 1, respectively, for frequency register 0
-    LSB |= 0x4000;
-    MSB |= 0x4000; 
-    if (!Shape)  WriteToDDS(1 << 13); // B28 for 16 bits updates if Sinus
-    WriteToDDS(LSB);                  // Write lower 16 bits to AD9833 registers
-    WriteToDDS(MSB);                  // Write upper 16 bits to AD9833 registers.
-    WriteToDDS(0xC000);               // Phase register
-    WriteToDDS(Shape);                // Exit & Reset to SINE, SQUARE or TRIANGLE
-  }
-
-  void WriteToDDS(int Data) {  
-    digitalWrite(FSyncPin, LOW);       // Set FSyncPinPin low before writing to AD9833 registers
-    delayMicroseconds(5);              // Give AD9833 time to get ready to receive data.
-    SPI.transfer(highByte(Data));      // Each AD9833 register is 32 bits wide and each 16
-    SPI.transfer(lowByte (Data));      // bits has to be transferred as 2 x 8-bit bytes.
-    digitalWrite(FSyncPin, HIGH);      // Write done. Set FSyncPinPin high
-  }
-#endif
 
 void LowReadWarning() {
     PlayTone(0,0); // Turn off the tone.
     WarningReading= Reading;
-    #ifndef SPEECH
-      lcd.clear();
-      ShowLCD("Lower Min Value!",0,true);
-      Beep(3,300);
-      if (!Display) ShowStatusLCD();
-    #else  
       Beep(3,300);
       //Say play sound 15
-    #endif  
+
 }  
 
 String WordToStr(word Inp, byte Size) {
@@ -659,17 +511,9 @@ boolean InRange() {
 void StopLogging() {
    LogMode= 0;
    LogCounter= 0;
-   #ifdef SPEECH
-     PlaySound(LoggingStoppedMP3,4);
-   #else
-     lcd.clear();
-     ShowLCD("Logging stopped.",0,true);
-   #endif  
+   PlaySound(LoggingStoppedMP3,4);
    Beep(2,300);
-   #ifndef SPEECH
-      if (!Display) ShowStatusLCD();
-   #endif   
-}  
+ }  
 
 void WriteLog(word Value) {
   if ((millis()-PrevLogTime) > LogUpdTime) {
@@ -691,19 +535,12 @@ void OutputLog() {
 void MoveSensorWindow(int Val) {
   MinValue= MinValue + Val;
   MaxValue= MaxValue + Val;
-  #ifdef SPEECH
      if (Val < 0) PlaySound(SensorReducedMP3,3);
      else  PlaySound(SensorIncreasedMP3,3);
-  #else
-     Beep(1,300);
-     ShowLCD("Settings saved..",0, true);
-     ShowLCD("Min "+(String)MinValue+" Max "+(String)MaxValue, 1, true);
-  #endif   
+
   WriteConfig();
   delay(500);
-  #ifndef SPEECH
-     if (!Display) ShowStatusLCD();
-  #endif   
+  
 }  
 
 void MoveSensorWindowToLowestRead() {
@@ -711,18 +548,11 @@ void MoveSensorWindowToLowestRead() {
   MinValue= WarningReading-10;
   MaxValue= MinValue+SensorWindow;
   Beep(2,300);
-  #ifdef SPEECH
-    PlaySound(SettingsAreSavedMP3,4);
+  PlaySound(SettingsAreSavedMP3,4);
     //Maybe say settings  
-  #else
-    ShowLCD("Settings saved..",0, true);
-    ShowLCD("Min "+(String)MinValue+" Max "+(String)MaxValue, 1, true);
-  #endif  
   WriteConfig();
   delay(3000);
-  #ifndef SPEECH
-    if (!Display) ShowStatusLCD();
-  #endif  
+ 
 }  
 
 void EEPromClear() {
@@ -733,33 +563,25 @@ void AutoAdjust() {
   word Reading;
   word LowestReading= 1023;
   word TimeOutCounter=   0; 
-  #ifdef SPEECH
-    ClearOLED();
-    ShowOLED("Prepare for aiming..", 0,4,1);
-    PlaySound(AutoAdjustStartedMP3,4);
-    PlaySound(PrepareWeaponForAimingMP3,4);
-  #else  
-    lcd.clear();
-    ShowLCD("Auto Adjust.", 0, true);
-    ShowLCD("Get ready.", 1, true);
-    //ShowLCD((String)TimeOutCounter, 1, true);
-  #endif  
+
+  ClearOLED();
+  ShowOLED("Prepare for aiming..", 0,4,1);
+  PlaySound(AutoAdjustStartedMP3,4);
+  PlaySound(PrepareWeaponForAimingMP3,4);
+ 
   while (TimeOutCounter < (GetReadyTime*90)) {
-    Reading= ReadValue(0);
-    AudioTone= fscale(100,900,HighTone,LowTone,Reading,Curve);
-    PlayTone(AudioTone,0);
-    TimeOutCounter++;
-    delay(10);
+     Reading= ReadValue(0);
+     AudioTone= fscale(100,900,HighTone,LowTone,Reading,Curve);
+     PlayTone(AudioTone,0);
+     TimeOutCounter++;
+     delay(10);
   }
   delay(300); 
   Beep(1,2000); 
   delay(300);
-  #ifdef SPEECH
-     ShowOLED("Start to aim now!", 0,4,1);
-     PlaySound(StartToAimNowMP3,5);
-  #else   
-     ShowLCD("Aim at target.", 1, true);
-  #endif   
+
+  ShowOLED("Start to aim now!", 0,4,1);
+  PlaySound(StartToAimNowMP3,5);
   TimeOutCounter= 0;
   while (ReadKey() == None) {
     Reading= ReadValue(0);
@@ -777,37 +599,22 @@ void AutoAdjust() {
     Beep(3,2000);
     MinValue= LowestReading-20;
     MaxValue= MinValue+AutoAdjustWindow;
-    #ifndef SPEECH
-      ShowLCD("Config saved", 0, true);
-      ShowLCD("Min "+(String)MinValue+" Max "+(String)MaxValue, 1, true);
-    #endif  
     WriteConfig();
     delay(3000);
   }else{
-     #ifdef SPEECH
-        ShowOLED("Warning level to high!", 0,4,1);
-        PlaySound(CalibrationLevelToHighMP3,10);
-        PlayNumber(LowestReading,1);
-     #else
-        lcd.clear();
-        ShowLCD("Warning!!", 0, true);
-        ShowLCD("Sensor Error, ", 1, false);
-        Beep(6,100);
-     #endif 
+    ShowOLED("Warning level to high!", 0,4,1);
+    PlaySound(CalibrationLevelToHighMP3,10);
+    PlayNumber(LowestReading,1);
   }  
-  #ifdef SPEECH
-     ShowOLED("Calibrated at: "+(String)MinValue, 0,4,1);
-     PlaySound(CalibratedAtMP3,3);
-     PlayNumber(MinValue, 0);
-     ShowOLED("Ajusting finished", 0,4,1);
-     PlaySound(AutoAdjustFinishedMP3,4);
-     ShowOLED("Enjoy shooting!", 0,4,1);
-     PlaySound(HaveFunShootingMP3,4);
-     ShowValuesOLED();
-  #else
-    lcd.clear();
-    if (!Display)ShowStatusLCD();
-  #endif   
+
+   ShowOLED("Calibrated at: "+(String)MinValue, 0,4,1);
+   PlaySound(CalibratedAtMP3,3);
+   PlayNumber(MinValue, 0);
+   ShowOLED("Ajusting finished", 0,4,1);
+   PlaySound(AutoAdjustFinishedMP3,4);
+   ShowOLED("Enjoy shooting!", 0,4,1);
+   PlaySound(HaveFunShootingMP3,4);
+   ShowValuesOLED();
 } 
 
 byte ReadKey() {
@@ -827,7 +634,7 @@ byte ReadKey() {
   return Key;
 }  
 
-#ifdef SPEECH
+
   void InitKeyPad() {
     pinMode(Key1Pin,INPUT_PULLUP);
     pinMode(Key2Pin,INPUT_PULLUP);
@@ -853,7 +660,7 @@ byte ReadKey() {
       return None;
   }  
   
-  #ifdef OLED
+
      void ShowOLED(String Text, byte X, byte Y, byte Font) {
        if (Font==1) oled.setFont(X11fixed7x14); 
        if (Font==2) oled.setFont(TimesNewRoman16_bold);
@@ -883,15 +690,9 @@ byte ReadKey() {
         ShowOLED("Kedok "+(String)Version+"           (c)", 0,0,2);
      }
      
-  #endif   
-
+ 
   void SendMP3Command(int8_t Command, int16_t Data) {
-    #ifdef DEBUG-SPEECH
-      Serial.println("MP3 COMMAND");   
-      Serial.println("CMD: "+(String)Command);
-      Serial.println("Data: "+(String)Data);
-    #endif   
-    delay(20);
+     delay(20);
     Send_buf[0] = 0x7e; //starting byte
     Send_buf[1] = 0xff; //version
     Send_buf[2] = 0x06; //the number of bytes of the command without starting byte and ending byte
@@ -908,10 +709,7 @@ byte ReadKey() {
   } 
 
   void PlaySound(word Index, word Time) {
-    #ifdef DEBUG-SPEECH
-      Serial.println("Play sound nr: "+(String)Index);
-    #endif
-    SendMP3Command(CMD_PLAY_FOLDER_FILE, MP3Language+Index);
+     SendMP3Command(CMD_PLAY_FOLDER_FILE, MP3Language+Index);
     DelaySecIntr(Time,true);
   }
 
@@ -944,13 +742,6 @@ byte ReadKey() {
   }
 
   byte KeyVal() {
-    #ifdef DEBUG-SPEECH
-       if (!digitalRead(Key1Pin)) Serial.println("Key: Select"); 
-       if (!digitalRead(Key2Pin)) Serial.println("Key: Down");
-       if (!digitalRead(Key3Pin)) Serial.println("Key: Up");
-       if (!digitalRead(Key4Pin)) Serial.println("Key: Right");
-       if (!digitalRead(Key5Pin)) Serial.println("Key: Left");
-    #endif
     if (!digitalRead(Key1Pin)) {PlayTone(1000,20); return Select;}
     if (!digitalRead(Key2Pin)) {PlayTone(1000,20); return Down;}
     if (!digitalRead(Key3Pin)) {PlayTone(1000,20); return Up;}
@@ -1211,242 +1002,23 @@ byte ReadKey() {
     ClearOLED();
     ShowValuesOLED();
   }
-#else
-  void ShowLCD(String Text, byte Line, boolean Clear) {
-    lcd.setCursor(0, Line);
-    lcd.print(EmptyLine);
-    lcd.setCursor(0, Line);
-    lcd.print(Text);
-  }
 
-  void ShowBar(byte Len) {
-    lcd.clear();
-    lbg.drawValue(Len, 160);
-    ShowLCD((String)map(Len,0,160,0,10),2,true);
-  } 
-
-  void Screen(boolean Dis) {
-    if (Dis) {
-      Display= None;
-      lcd.clear();
-      ShowStatusLCD();
-    }
-    else Display= 1;
-    delay(500); 
-  }
-
-  void ShowValues() {
-    #ifdef DEBUG-LCD
-      ShowLCD("Sen:"+WordToStr(Reading,4)+ " L:"+WordToStr(LoopCounter,5),0, true);
-      LoopCounter= 0;
-    #else  
-      ShowLCD("Sen:"+WordToStr(Reading,4)+ " Low:"+WordToStr(LowestReading,3),0, true);
-    #endif  
-    ShowLCD("Min:"+WordToStr(MinValue,4)+" Max:"+WordToStr(MaxValue,3),1, true);
-  } 
-
-  void ShowStatusLCD() {
-    if (LogMode) ShowLCD("Running..      *",0, false);
-    else ShowLCD("Running..",0, false);
-    ShowLCD("L:"+WordToStr(MinValue,3)+" H:"+WordToStr(MaxValue,3)+" C:"+WordToStr(Curve,2),1, true);
-  } 
-
-  byte KeyVal() {                     
-    word Val= analogRead(0);
-    if (Val > 900)  return 0; //None     todo change code to map function
-    if (Val > 600)  return 1; //Select
-    if (Val > 400)  return 2; //Left
-    if (Val > 200)  return 3; //Down
-    if (Val > 80 )  return 4; //Up
-    return                 5; //Right
-  }
-  
-  void Menu() {
-    PlayTone(0,0);
-    delay(500);
-    ShowLCD("Settings",0, true);
-    boolean Esc= false;
-    while (!Esc) {
-      ShowLCD("MIN: "+(String)MinValue, 1, true);
-      if (KeyVal() == Down)   if (MinValue > 10) MinValue-= 5;
-      if (KeyVal() == Up)     if (MinValue < (MaxValue-20)) MinValue+= 5;
-      if (KeyVal() == Select) Esc= true;
-      delay(300);
-    } 
-    Esc= false; 
-    while (!Esc) {
-      ShowLCD("MAX: "+(String)MaxValue, 1, true);
-      delay(300);
-      if (KeyVal() == Down)   if (MaxValue > (MinValue+20)) MaxValue-= 5;
-      if (KeyVal() == Up)     if (MaxValue < 990) MaxValue+= 5;
-      if (KeyVal() == Select) Esc= true;
-    }
-    Esc= false; 
-    while (!Esc) {
-      ShowLCD("Lead in: "+(String)ThresholdWindow, 1, true);
-      delay(300);
-      if (KeyVal() == Down)   if (ThresholdWindow > 10)  ThresholdWindow-= 10;
-      if (KeyVal() == Up)     if (ThresholdWindow < 190) ThresholdWindow+= 10;
-      if (KeyVal() == Select) Esc= true;
-    }
-    Esc= false;  
-    while (!Esc) {
-      ShowLCD("GetReadyTime: "+(String)GetReadyTime, 1, true);
-      delay(300);
-      if (KeyVal() == Down)   if (GetReadyTime > 2)    GetReadyTime--;
-      if (KeyVal() == Up)     if (GetReadyTime < 20)   GetReadyTime++;
-      if (KeyVal() == Select) Esc= true;
-    }
-    Esc= false; 
-    while (!Esc) {
-      ShowLCD("Curve: "+(String)Curve, 1, true);
-      delay(300);
-      if (KeyVal() == Down)   if (Curve > 0) Curve--;
-      if (KeyVal() == Up)     if (Curve < 5) Curve++;
-      if (KeyVal() == Select) Esc= true;
-    }
-    Esc= false; 
-    #ifdef DDS9833   
-      while (!Esc) {
-        ShowLCD("Shape: "+(String)WaveShapes[WaveShape], 1, true);
-        delay(300);
-        if (KeyVal() == Down)   if (WaveShape > 0) WaveShape--;
-        if (KeyVal() == Up)     if (WaveShape < 2) WaveShape++;
-        if (KeyVal() == Select) Esc= true;
-      }
-      Esc= false; 
-    #endif 
-    while (!Esc) {
-      ShowLCD("Pitch rev: "+(String)YesNoArr[PitchRev], 1, true);
-      delay(300);
-      if (KeyVal() == Down)   if (PitchRev > 0) PitchRev--;
-      if (KeyVal() == Up)     if (PitchRev < 1) PitchRev++;
-      if (KeyVal() == Select) Esc= true;
-    }
-    Esc= false;   
-    while (!Esc) {
-      ShowLCD("Always tone: "+(String)YesNoArr[AlwaysSound], 1, true);
-      delay(300);
-      if (KeyVal() == Down)   if (AlwaysSound > 0) AlwaysSound--;
-      if (KeyVal() == Up)     if (AlwaysSound < 1) AlwaysSound++;
-      if (KeyVal() == Select) Esc= true;
-    }    
-    Esc= false;   
-    while (!Esc) {
-      ShowLCD("AutoWindow: "+(String)AutoAdjustWindow, 1, true);
-      delay(300);
-      if (KeyVal() == Down)   if (AutoAdjustWindow > 50)   AutoAdjustWindow-= 10;
-      if (KeyVal() == Up)     if (AutoAdjustWindow < 300)  AutoAdjustWindow+= 10;
-      if (KeyVal() == Select) Esc= true;
-    }  
-    Esc= false;
-    while (!Esc) {
-      ShowLCD("LowTone: "+(String)LowTone, 1, true);
-      PlayTone(LowTone,0);
-      delay(300);
-      if (KeyVal() == Down)   if (LowTone > 50) LowTone-= 50;
-      if (KeyVal() == Up)     if (LowTone < (HighTone-100)) LowTone+= 50;
-      if (KeyVal() == Select) Esc= true;
-    } 
-    Esc= false; 
-    PlayTone(0,0);
-    while (!Esc) {
-      ShowLCD("HighTone: "+(String)HighTone, 1, true);
-      PlayTone(HighTone,0);
-      delay(300);
-      if (KeyVal() == Down)   if (HighTone > (LowTone+100)) HighTone-= 50;
-      if (KeyVal() == Up)     if (HighTone < 9000) HighTone+= 50;
-      if (KeyVal() == Select) Esc= true;
-    }
-    Esc= false;
-    PlayTone(0,0);
-    Display=  EEPROM.read(18); //read value from rom setting instead of global  
-    while (!Esc) {
-      ShowLCD("Display: "+(String)DisplayType[Display], 1, true);
-      delay(300);
-      if (KeyVal() == Down)   if (Display > 0) Display--;
-      if (KeyVal() == Up)     if (Display < 2) Display++;
-      if (KeyVal() == Select) Esc= true;
-    }
-    Esc= false;
-    while (!Esc) {
-      ShowLCD("Average: "+(String)AvgModes[AverageValue], 1, true);
-      delay(300);
-      if (KeyVal() == Down)   if (AverageValue > 0) AverageValue--;
-      if (KeyVal() == Up)     if (AverageValue < 3) AverageValue++;
-      if (KeyVal() == Select) Esc= true;
-    }
-    Esc= false;
-    while (!Esc) {
-      ShowLCD("Samples: "+(String)SampleModes[SampleSpeed], 1, true);
-      delay(300);
-      if (KeyVal() == Down)   if (SampleSpeed > 0) SampleSpeed--;
-      if (KeyVal() == Up)     if (SampleSpeed < 3) SampleSpeed++;
-      if (KeyVal() == Select) Esc= true;
-    }
-    Esc= false;
-    while (!Esc) {
-      ShowLCD("Pitch Step: "+(String)YesNoArr[PitchStep], 1, true);
-      delay(300);
-      if (KeyVal() == Down)   if (PitchStep > 0) PitchStep--;
-      if (KeyVal() == Up)     if (PitchStep < 1) PitchStep++;
-      if (KeyVal() == Select) Esc= true;
-    }    
-    Esc= false;  
-    while (!Esc) {
-      ShowLCD("Logging: "+(String)LoggingModes[LogMode], 1, true);
-      delay(300);
-      if (KeyVal() == Down)   if (LogMode > 0) LogMode--;
-      if (KeyVal() == Up)     if (LogMode < 2) LogMode++;
-      if (KeyVal() == Select) Esc= true;
-    }
-    Esc= false;
-    boolean SetToDefaults= false;   
-    while (!Esc) {
-      ShowLCD("Reset ALL: "+(String)YesNoArr[SetToDefaults], 1, true);
-      delay(300); 
-      if (KeyVal() == Down)   if (SetToDefaults > 0) SetToDefaults= false;
-      if (KeyVal() == Up)     if (SetToDefaults < 1) SetToDefaults= true;
-      if (KeyVal() == Select) Esc= true;
-    }
-    if (SetToDefaults) { 
-      EEPROM.write(0,0); 
-      Reset(); 
-    }
-    if (LogMode==2) OutputLog();
-    if (LogMode==1) LogCounter= 0;  
-    WriteConfig();
-    ShowLCD("Saved......",1,true);
-    delay(3000);
-    lcd.clear();
-    if (!Display) ShowStatusLCD(); 
-  }
-#endif
 
 void setup() {
   //Pinmode for audio pin????  
   //pinMode(AudioPin, OUTPUT);
   pinMode(SensorPin, INPUT);
-  #ifdef SPEECH
-    InitKeyPad();
-    #ifdef OLED
-       oled.begin(&Adafruit128x64, I2C_ADDRESS);
-       ClearOLED();
-       ShowOLED("Initialize...", 0,4,2);
-    #endif
-  #else  
-    lcd.begin(16, 2);
-    lcd.clear();
-    ShowLCD("Starting...",0, true);
-    delay(1000);
-  #endif
+  InitKeyPad();
+
+ oled.begin(&Adafruit128x64, I2C_ADDRESS);
+ ClearOLED();
+ ShowOLED("Initialize...", 0,4,2);
   Serial.begin(9600);
   if (EEPROM.read(0)==1) ReadConfig();
   else WriteConfig();
   PrevLogTime= millis();
   LowestReading= MaxValue;
   WarningReading= MinValue;
-  #ifdef SPEECH
     mySerial.begin(9600);
     delay(500);//Wait chip initialization is complete
     SendMP3Command(CMD_SEL_DEV, DEV_TF);//select the TF card  
@@ -1454,26 +1026,6 @@ void setup() {
     SetVolume(MP3Volume);
     PlaySound(WelcomeMP3,4);
     ShowValuesOLED();
-  #endif 
-  #ifdef DDS9833
-    pinMode(FSyncPin, OUTPUT); //CS for DDS module
-    SPI.begin(); //Start SPI for DDS module
-    SPI.setDataMode(SPI_MODE2);  delay(50); 
-    AD9833reset();     // Reset AD9833.
-    SetFrequency(0);   // Set the frequency
-  #endif  
-  #ifndef SPEECH
-    PlayMelody();
-    #ifdef DDS9833
-      ShowLCD("Kedok "+(String)Version+" DDS",0, true);
-    #else  
-      ShowLCD("Kedok "+(String)Version,0, true);
-    #endif  
-    ShowLCD(Owner,1, false);
-    delay(2000);
-    if (!Display) ShowStatusLCD();
-    PrevDispTime= millis();
-  #endif  
 }
 
 void loop() {
@@ -1502,7 +1054,7 @@ void loop() {
 //-----------------
 
   if (Reading < LowestReading) LowestReading= Reading; 
-  #ifdef SPEECH
+
     KeyPressed= KeyVal();
     if (KeyPressed) {  
       if (KeyPressed == Select)    Menu();
@@ -1512,22 +1064,11 @@ void loop() {
       if (KeyPressed == Up)        MoveSensorWindow(MoveSensorWindowStepSize);
       //ToDo add more
     }
-  #else
-    KeyPressed= ReadKey();
-    if (KeyPressed) {  
-      if (KeyPressed == Select)    Menu();
-      if (KeyPressed == Right)     LowestReading= MaxValue;
-      if (KeyPressed == RightLong) AutoAdjust();
-      if (KeyPressed == Left)      if (Display) Screen(Disable); else Screen(Enable);
-      if (KeyPressed == Down)      MoveSensorWindow(0-MoveSensorWindowStepSize);
-      if (KeyPressed == DownLong)  MoveSensorWindowToLowestRead();
-      if (KeyPressed == Up)        MoveSensorWindow(MoveSensorWindowStepSize);
-    }  
-  #endif
+
   if (SampleSpeed) delay((1 << SampleSpeed-1)*5); //0,5,10,20  
-  #ifdef DEBUG-LCD
-    LoopCounter++;
-  #endif  
+
+  //  LoopCounter++;
+  
 }
 
 

@@ -874,13 +874,9 @@ byte ReadKey() {
         ShowOLED("Pitch Step: "+(String)YesNoArr[PitchStep],0,7,3);
      }
 
-     void ShowSensorOLED(word Value) {
-        ShowOLED((String)Value,45,3,5);
-     }
-
      void ClearOLED() {
         oled.clear();
-        ShowOLED("Kedok "+(String)Version+"           (c)", 0,0,2);
+        ShowOLED("Kedok "+(String)Version+"     (c)", 0,0,2);
      }
      
   #endif   
@@ -962,7 +958,7 @@ byte ReadKey() {
   void Menu() {
   ClearOLED();
   ShowOLED("Settings menu", 0,0,2);
-  ShowOLED("Please wait...", 0,4,1);
+  ShowOLED("Reading....", 0,4,1);
   PlayTone(0,0);
   byte OptionNr= 0;
   PlaySound(SettingsMenuMP3,3);
@@ -990,10 +986,8 @@ byte ReadKey() {
       if (KeyVal() == Up)       if (OptionNr < 14) OptionNr+= 1;
       if (KeyVal() == Down)     if (OptionNr >  0) OptionNr-= 1;
       if (KeyVal() == Select)   Esc= true; 
-      if (KeyVal() == Right)    PlayHelp(OptionNr);  
-      if (KeyVal() == Left)     return;    
+      if (KeyVal() == Right)    PlayHelp(OptionNr);     
     }
-    ShowOLED("Please wait...", 0,4,1);
     PlaySound(UseArrowKeysMP3,6);
     switch(OptionNr) {
       case 0: Esc= false;
@@ -1009,6 +1003,7 @@ byte ReadKey() {
                  if (KeyVal() == Select)   WriteConfig();
                  SetVolume(MP3Volume);
               }
+              Esc= false;
               break;
       case 1: Esc= false;
               while (!Esc) {
@@ -1019,8 +1014,7 @@ byte ReadKey() {
                  if (KeyVal() == Up)       if (MinValue < (MaxValue-20)) MinValue+= 5;
                  if (KeyVal() == Down)     if (MinValue > 10) MinValue-= 5;
                  if (KeyVal() == Right)    PlayHelp(OptionNr); 
-                 if (KeyVal() == Left)     Esc= true;
-                 if (KeyVal() == Select)   WriteConfig();
+                 if (KeyVal() == Select)   Esc= true;
               }
               break;
       case 2: Esc= false;
@@ -1032,21 +1026,19 @@ byte ReadKey() {
                  if (KeyVal() == Up)       if (MaxValue < 990) MaxValue+= 5;
                  if (KeyVal() == Down)     if (MaxValue > (MinValue+20)) MaxValue-= 5;
                  if (KeyVal() == Right)    PlayHelp(OptionNr); 
-                 if (KeyVal() == Left)     Esc= true;
-                 if (KeyVal() == Select)   WriteConfig();
+                 if (KeyVal() == Select)   Esc= true;
               }
               break;
       case 3: Esc= false;
               while (!Esc) {
                  #ifdef OLED
-                    ShowOLED("Threshold: "+(String)ThresholdWindow, 0,4,1);
+                    ShowOLED("Threshold Window: "+(String)ThresholdWindow, 0,4,1);
                  #endif
                  PlayNumber(ThresholdWindow, 1);
                  if (KeyVal() == Up)       if (ThresholdWindow < 190) ThresholdWindow+= 10;
                  if (KeyVal() == Down)     if (ThresholdWindow > 10)  ThresholdWindow-= 10;
                  if (KeyVal() == Right)    PlayHelp(OptionNr); 
-                 if (KeyVal() == Left)     Esc= true;
-                 if (KeyVal() == Select)   WriteConfig();
+                 if (KeyVal() == Select)   Esc= true;
               }
               break;     
       case 4: Esc= false;
@@ -1058,8 +1050,7 @@ byte ReadKey() {
                  if (KeyVal() == Up)       if (Curve < 5) Curve++;
                  if (KeyVal() == Down)     if (Curve > 0) Curve--;
                  if (KeyVal() == Right)    PlayHelp(OptionNr); 
-                 if (KeyVal() == Left)     Esc= true;
-                 if (KeyVal() == Select)   WriteConfig();
+                 if (KeyVal() == Select)   Esc= true;
               }
               break;  
       case 5: Esc= false;
@@ -1068,8 +1059,7 @@ byte ReadKey() {
                  if (KeyVal() == Up)       if (PitchRev < 1) PitchRev++;
                  if (KeyVal() == Down)     if (PitchRev > 0) PitchRev--;
                  if (KeyVal() == Right)    PlayHelp(OptionNr); 
-                 if (KeyVal() == Left)     Esc= true;
-                 if (KeyVal() == Select)   WriteConfig();
+                 if (KeyVal() == Select)   Esc= true;
               }
               break;
       case 6: Esc= false;
@@ -1078,8 +1068,7 @@ byte ReadKey() {
                  if (KeyVal() == Up)       if (AlwaysSound < 1) AlwaysSound++;
                  if (KeyVal() == Down)     if (AlwaysSound > 0) AlwaysSound--;
                  if (KeyVal() == Right)    PlayHelp(OptionNr); 
-                 if (KeyVal() == Left)     Esc= true;
-                 if (KeyVal() == Select)   WriteConfig();
+                 if (KeyVal() == Select)   Esc= true;
               }
               break;
       case 7: Esc= false;
@@ -1089,11 +1078,10 @@ byte ReadKey() {
                  #endif
                  PlayTone(LowTone,0);
                  delay(300);
-                 if (KeyVal() == Down)     if (LowTone > 50) LowTone-= 50;
-                 if (KeyVal() == Up)       if (LowTone < (HighTone-100)) LowTone+= 50;
-                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
-                 if (KeyVal() == Left)     Esc= true;
-                 if (KeyVal() == Select)   WriteConfig();
+                 if (KeyVal() == Down)   if (LowTone > 50) LowTone-= 50;
+                 if (KeyVal() == Up)     if (LowTone < (HighTone-100)) LowTone+= 50;
+                 if (KeyVal() == Right)  PlayHelp(OptionNr); 
+                 if (KeyVal() == Select) Esc= true;
               }
               PlaySound(LowPitchSetAtMP3,4); PlayNumber(LowTone, 0); PlaySound(HertzMP3,2);
               break;    
@@ -1104,11 +1092,10 @@ byte ReadKey() {
                  #endif
                  PlayTone(HighTone,0);
                  delay(300);
-                 if (KeyVal() == Down)     if (HighTone > (LowTone+100)) HighTone-= 50;
-                 if (KeyVal() == Up)       if (HighTone < 9000) HighTone+= 50;
-                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
-                 if (KeyVal() == Left)     Esc= true;
-                 if (KeyVal() == Select)   WriteConfig();
+                 if (KeyVal() == Down)   if (HighTone > (LowTone+100)) HighTone-= 50;
+                 if (KeyVal() == Up)     if (HighTone < 9000) HighTone+= 50;
+                 if (KeyVal() == Right)  PlayHelp(OptionNr); 
+                 if (KeyVal() == Select) Esc= true;
               }
               PlaySound(HighPitchSetAtMP3,4); PlayNumber(HighTone, 0); PlaySound(HertzMP3,2);
               break;  
@@ -1118,11 +1105,10 @@ byte ReadKey() {
                     ShowOLED("Auto adj. window: "+(String)AutoAdjustWindow, 0,4,1);
                  #endif
                  PlayNumber(AutoAdjustWindow, 1);
-                 if (KeyVal() == Down)     if (AutoAdjustWindow > 50)   AutoAdjustWindow-= 10;
-                 if (KeyVal() == Up)       if (AutoAdjustWindow < 300)  AutoAdjustWindow+= 10;
-                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
-                 if (KeyVal() == Left)     Esc= true;
-                 if (KeyVal() == Select)   WriteConfig();
+                 if (KeyVal() == Down)   if (AutoAdjustWindow > 50)   AutoAdjustWindow-= 10;
+                 if (KeyVal() == Up)     if (AutoAdjustWindow < 300)  AutoAdjustWindow+= 10;
+                 if (KeyVal() == Right)  PlayHelp(OptionNr); 
+                 if (KeyVal() == Select) Esc= true;
               }
               break;
      case 10: Esc= false;
@@ -1131,70 +1117,53 @@ byte ReadKey() {
                     ShowOLED("Get ready time: "+(String)GetReadyTime+" s.", 0,4,1);
                  #endif
                  PlayNumber(GetReadyTime, 1);
-                 if (KeyVal() == Down)     if (GetReadyTime > 2)       GetReadyTime-= 1;
-                 if (KeyVal() == Up)       if (GetReadyTime < 20)      GetReadyTime+= 1;
-                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
-                 if (KeyVal() == Left)     Esc= true;
-                 if (KeyVal() == Select)   WriteConfig();
+                 if (KeyVal() == Down)   if (GetReadyTime > 2)       GetReadyTime-= 1;
+                 if (KeyVal() == Up)     if (GetReadyTime < 20)      GetReadyTime+= 1;
+                 if (KeyVal() == Right)  PlayHelp(OptionNr); 
+                 if (KeyVal() == Select) Esc= true;
               }
               break;             
      case 11: Esc= false;
               while (!Esc) {
-                #ifdef OLED
-                    ShowOLED("Averaging: "+(String)AvgModes[AverageValue], 0,4,1);
-                 #endif
-                 if (AverageValue == 0)    PlaySound(DisableMP3,4); //beter uitleg? disabled als niet actief?
-                 if (AverageValue == 1)    PlaySound(LowMP3,4);
-                 if (AverageValue == 2)    PlaySound(MediumMP3,4); 
-                 if (AverageValue == 3)    PlaySound(HighMP3,4);
-                 if (KeyVal() == Down)     if (AverageValue > 0)       AverageValue-= 1;
-                 if (KeyVal() == Up)       if (AverageValue < 3)       AverageValue+= 1;
-                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
-                 if (KeyVal() == Left)     Esc= true;
-                 if (KeyVal() == Select)   WriteConfig();
+                 if (AverageValue == 0) PlaySound(DisableMP3,4); //beter uitleg? disabled als niet actief?
+                 if (AverageValue == 1) PlaySound(LowMP3,4);
+                 if (AverageValue == 2) PlaySound(MediumMP3,4); 
+                 if (AverageValue == 3) PlaySound(HighMP3,4);
+                 if (KeyVal() == Down)   if (AverageValue > 0)       AverageValue-= 1;
+                 if (KeyVal() == Up)     if (AverageValue < 3)       AverageValue+= 1;
+                 if (KeyVal() == Right)  PlayHelp(OptionNr); 
+                 if (KeyVal() == Select) Esc= true;
               }
               break;
      case 12: Esc= false;
               while (!Esc) {
-                 #ifdef OLED
-                    ShowOLED("Speed: "+(String)SampleModes[SampleSpeed], 0,4,1);
-                 #endif
-                 if (SampleSpeed == 0)     PlaySound(FastMP3,4);
-                 if (SampleSpeed == 1)     PlaySound(MediumMP3,4); 
-                 if (SampleSpeed == 2)     PlaySound(SlowMP3,4);
-                 if (SampleSpeed == 3)     PlaySound(SlowestMP3,4);
-                 if (KeyVal() == Down)     if (SampleSpeed > 0)       SampleSpeed-= 1;
-                 if (KeyVal() == Up)       if (SampleSpeed < 3)       SampleSpeed+= 1;
-                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
-                 if (KeyVal() == Left)     Esc= true;
-                 if (KeyVal() == Select)   WriteConfig();
+                 if (SampleSpeed == 0)   PlaySound(FastMP3,4);
+                 if (SampleSpeed == 1)   PlaySound(MediumMP3,4); 
+                 if (SampleSpeed == 2)   PlaySound(SlowMP3,4);
+                 if (SampleSpeed == 3)   PlaySound(SlowestMP3,4);
+                 if (KeyVal() == Down)   if (SampleSpeed > 0)       SampleSpeed-= 1;
+                 if (KeyVal() == Up)     if (SampleSpeed < 3)       SampleSpeed+= 1;
+                 if (KeyVal() == Right)  PlayHelp(OptionNr); 
+                 if (KeyVal() == Select) Esc= true;
               }
               break; 
      case 13: Esc= false;
               while (!Esc) {
-                #ifdef OLED
-                    ShowOLED("Pitch step: "+(String)YesNoArr[PitchStep], 0,4,1);
-                 #endif
                  if (PitchStep) PlaySound(PitchStepEnabledMP3,4); else PlaySound(PitchStepDisabledMP3,4); 
-                 if (KeyVal() == Up)       if (PitchStep < 1) PitchStep++;
-                 if (KeyVal() == Down)     if (PitchStep > 0) PitchStep--;
-                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
-                 if (KeyVal() == Left)     Esc= true;
-                 if (KeyVal() == Select)   WriteConfig();
+                 if (KeyVal() == Up)      if (PitchStep < 1) PitchStep++;
+                 if (KeyVal() == Down)    if (PitchStep > 0) PitchStep--;
+                 if (KeyVal() == Right)   PlayHelp(OptionNr); 
+                 if (KeyVal() == Select)  Esc= true;
               }
               break;          
      case 14: Esc= false;
               boolean SetToDefaults= false; 
               while (!Esc) {
-                 #ifdef OLED
-                    ShowOLED("Factory reset: "+(String)YesNoArr[SetToDefaults], 0,4,1);
-                 #endif
-                 if (SetToDefaults) PlaySound(RestoreFactoryDefaultsEnabledMP3,4); else PlaySound(RestoreFactoryDefaultsDisabledMP3,4); 
-                 if (KeyVal() == Up)        if (SetToDefaults < 1) SetToDefaults= true;
-                 if (KeyVal() == Down)      if (SetToDefaults > 0) SetToDefaults= false;
-                 if (KeyVal() == Right)     PlayHelp(OptionNr); 
-                 if (KeyVal() == Left)     Esc= true;
-                 if (KeyVal() == Select)   WriteConfig();
+                if (SetToDefaults) PlaySound(RestoreFactoryDefaultsEnabledMP3,4); else PlaySound(RestoreFactoryDefaultsDisabledMP3,4); 
+                if (KeyVal() == Up)       if (SetToDefaults < 1) SetToDefaults= true;
+                if (KeyVal() == Down)     if (SetToDefaults > 0) SetToDefaults= false;
+                if (KeyVal() == Right)    PlayHelp(OptionNr); 
+                if (KeyVal() == Select)   Esc= true;
               }
               if (SetToDefaults) {
                   PlaySound(AllSettingsResetToDefaultsMP3,4);
@@ -1203,13 +1172,11 @@ byte ReadKey() {
               }
               break;                        
     }
-    ShowOLED("Leaving menu", 0,4,1);
     PlayTone(0,0);  
     PlaySound(ExitOptionsMenuMP3,4);
     if (LogMode==2) OutputLog();
     if (LogMode==1) LogCounter= 0;  
-    ClearOLED();
-    ShowValuesOLED();
+    WriteConfig();
   }
 #else
   void ShowLCD(String Text, byte Line, boolean Clear) {
@@ -1478,13 +1445,17 @@ void setup() {
 
 void loop() {
   Reading= ReadValue(AverageValue);
-  if (Display) {
-     if ((millis()-PrevDispTime) > DispUpdTime) {
-        ShowSensorOLED(Reading);
+  #ifndef SPEECH
+    if (Display) {
+      if ((millis()-PrevDispTime) > DispUpdTime) {
+        if (Display == Value) ShowValues();
+        if (Display == Bar) if (InRange()) ShowBar(map(Reading,MinValue,MaxValue,160,0));
+        else ShowBar(2);
         PrevDispTime= millis();
-     }
-  } 
-   
+      }
+    } 
+  #endif
+  
  //--------Kernel part-------- 
   if (Reading < MinValue) {
      LowReadWarning(); 
@@ -1507,7 +1478,7 @@ void loop() {
     if (KeyPressed) {  
       if (KeyPressed == Select)    Menu();
       if (KeyPressed == Right)     AutoAdjust();
-      if (KeyPressed == Left)      {ClearOLED(); delay(300); Display= !Display;}
+      //if (KeyPressed == Left)      if (Display) Screen(Disable); else Screen(Enable);
       if (KeyPressed == Down)      MoveSensorWindow(0-MoveSensorWindowStepSize);
       if (KeyPressed == Up)        MoveSensorWindow(MoveSensorWindowStepSize);
       //ToDo add more
