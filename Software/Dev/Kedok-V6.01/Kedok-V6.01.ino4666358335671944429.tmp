@@ -3,7 +3,7 @@ __asm volatile ("nop");
 #endif
 
 //====================================Compiler options=============================================================
-//#define DEBUG-SPEECH  //Give debug info over serial port.
+#define DEBUG-SPEECH  //Give debug info over serial port if you compile a Kedok speech version
 
 const   char      Version[5]="6.00";
 const   char      Owner[16]= "DEMO";
@@ -34,11 +34,6 @@ word    MP3Language=       0X0100; //0X0100 English 0X0200 Dutch
               CAD and 3D printworks Jan Stinissen
 
 To Do:
-
- Remove unneeded eeprom settings, Dispay, Logging.
- //Remove all logging modes.
- //Remove Melody
- Prepare for setting EMA
 
  Battery level check?
  Start to add a i2c ADS1015 12-Bit ADC - 4 Channel 
@@ -297,8 +292,14 @@ static int8_t     Send_buf[8]= {0};
 
 SSD1306AsciiAvrI2c oled;
 
-byte    AudioPin=                10;
-byte    SensorPin=               A3;
+byte    AudioPin=               10;
+byte    SensorPin=              A3;
+
+int Melody[] = { 
+  262, 196, 196, 220, 196, 0, 247, 262 };
+int NoteDurations[] = { 
+  4, 8, 8, 4, 4, 4, 4, 4 };
+  
 
 const  byte None=                 0;
 const  byte Select=               1;
@@ -328,8 +329,12 @@ byte    ThresholdWindow=          150;
 byte    GetReadyTime=              20; // 20 Seconds
 word    PitchStepValue=           300; // Around the 8 on target card
 word    MoveSensorWindowStepSize=   5; // In/Dec MoveWindow steps if Up or Down is pressed  //Make constant?? !!!
+byte    LogMode=                    0;
+word    LogCounter=                 0;
 long    LoopCounter=                0;
 byte    MP3Volume=                 25;
+byte    LogBufferStart=            50; 
+word    LogUpdTime=               250; //4 times a second for 1000 values about 4 Min. logging 
 byte    AverageValue=               1; //Read 0 values to average, Default none. Steps 0,5,20,85
 byte    SampleSpeed=                0; //Loop delay 0,5,10,20
 byte    PitchStep=                  0; //Disables or enables Pitch step feature
@@ -355,12 +360,16 @@ struct SettingsObj {
 };  
 
 word    DispUpdTime=          1000; //1 sec Screen update 
+char    *DisplayType[]=       {"None", "Value",  "Bar"};
+char    *WaveShapes[]=        {"Sine", "Triangle", "Square"};
 char    *YesNoArr[]=          {"N", "Y"};
+char    *LoggingModes[]=      {"Off", "On", "Play"};
 char    *AvgModes[]=          {"Disable", "Low", "Medium", "Maximal"};
 char    *SampleModes[]=       {"Fast", "Medium", "Slow", "Slowest"};
 char    *EnableDisableArr[]=  {"Disable","Enable"};
 long    PrevDispTime;
 
+long    PrevLogTime;
 word    Reading;
 word    AudioTone;
 word    LowestReading;
@@ -388,8 +397,10 @@ void WriteConfig() {
     PitchStep,
   };  
   EEPROM.put(1, CurSettings);
-  ShowOLED("Saving config..", 0,4,1);
-  PlaySound(DataSettingsSavedMP3,3);
+  #ifdef SPEECH
+    ShowOLED("Saving config..", 0,4,1);
+    PlaySound(DataSettingsSavedMP3,3);
+  #endif  
 } 
 
 void ReadConfig() {
@@ -466,6 +477,14 @@ void Beep(byte Beeps, word Pitch) {
   }
 }
 
+void PlayMelody() {
+  for (int ThisNote= 0; ThisNote < 8; ThisNote++) {
+    int NoteDuration = 1000/NoteDurations[ThisNote];
+    PlayTone(Melody[ThisNote], NoteDuration);   // Play thisNote at full volume for noteDuration in the background. 
+    delay(NoteDuration * 4 / 3); // Wait while the tone plays in the background, plus another 33% delay between notes.
+  }
+}
+
 void LowReadWarning() {
     PlayTone(0,0); // Turn off the tone.
     WarningReading= Reading;
@@ -485,6 +504,30 @@ String WordToStr(word Inp, byte Size) {
 boolean InRange() {
   return ((Reading > MinValue) && (Reading < MaxValue));
 }
+
+void StopLogging() {
+   LogMode= 0;
+   LogCounter= 0;
+   PlaySound(LoggingStoppedMP3,4);
+   Beep(2,300);
+ }  
+
+void WriteLog(word Value) {
+  if ((millis()-PrevLogTime) > LogUpdTime) {
+    if (LogCounter < 999) {
+       EEPROM.update(LogCounter+LogBufferStart, map(Value, MinValue, MaxValue, 0, 255));
+       LogCounter++;
+       PrevLogTime= millis();
+    }else StopLogging();
+  }  
+ }  
+
+void OutputLog() {
+  for (int C= LogBufferStart; C<999; C++) { 
+    Serial.println(EEPROM.read(C));
+  }
+  StopLogging();
+}  
 
 void MoveSensorWindow(int Val) {
   MinValue= MinValue + Val;
@@ -566,7 +609,7 @@ void AutoAdjust() {
    PlaySound(AutoAdjustFinishedMP3,4);
    ShowOLED("Enjoy shooting!", 0,4,1);
    PlaySound(HaveFunShootingMP3,4);
-   UpdateDisplay();
+   ShowValuesOLED();
 } 
 
 byte ReadKey() {
@@ -627,7 +670,7 @@ void ShowOLED(String Text, byte X, byte Y, byte Font) {
    oled.print(Text);
 }
      
-void UpdateDisplay() {
+void UpdateScreen() {
   if (DisplaySensorReadings) {
     ShowOLED((String)Reading,43,3,5);
     ShowOLED("v "+(String)LowestReading,0,7,3); 
@@ -908,20 +951,23 @@ void Menu() {
                  if (KeyVal() == Up)        if (SetToDefaults < 1) SetToDefaults= true;
                  if (KeyVal() == Down)      if (SetToDefaults > 0) SetToDefaults= false;
                  if (KeyVal() == Right)     PlayHelp(OptionNr); 
-                 if (KeyVal() == Left)      Esc= true;
-                 if (KeyVal() == Select)    if (SetToDefaults) {
-                                               PlaySound(AllSettingsResetToDefaultsMP3,4);
-                                               EEPROM.write(0,0); 
-                                               Reset(); 
-                                            }
+                 if (KeyVal() == Left)     Esc= true;
+                 if (KeyVal() == Select)   WriteConfig();
+              }
+              if (SetToDefaults) {
+                  PlaySound(AllSettingsResetToDefaultsMP3,4);
+                  EEPROM.write(0,0); 
+                  Reset(); 
               }
               break;                        
     }
     ShowOLED("Leaving menu", 0,4,1);
     PlayTone(0,0);  
     PlaySound(ExitOptionsMenuMP3,4);
+    if (LogMode==2) OutputLog();
+    if (LogMode==1) LogCounter= 0;  
     ClearOLED();
-    UpdateDisplay();
+    ShowValuesOLED();
 }
 
 
@@ -936,6 +982,7 @@ void setup() {
   Serial.begin(9600);
   if (EEPROM.read(0)==1) ReadConfig();
   else WriteConfig();
+  PrevLogTime= millis();
   LowestReading= MaxValue;
   WarningReading= MinValue;
   mySerial.begin(9600);
@@ -944,7 +991,7 @@ void setup() {
   delay(500);
   SetVolume(MP3Volume);
   PlaySound(WelcomeMP3,4);
-  UpdateDisplay();
+  ShowValuesOLED();
 }
 
 void loop() {
@@ -964,6 +1011,7 @@ void loop() {
      else AudioTone= fscale(MinValue,MaxValue,HighTone,LowTone,Reading,Curve);
      if (PitchStep) { if (AudioTone > (HighTone-PitchStepValue)) AudioTone= AudioTone+PitchStepValue; }//PitchStep around the 8 on the target card.
      PlayTone(AudioTone,0);
+     if (LogMode) WriteLog(Reading);
   }else if (Reading < (MaxValue+ThresholdWindow)) {
      if (PitchRev) PlayTone(HighTone + 200,0);
      else PlayTone(LowTone-30,0);  
