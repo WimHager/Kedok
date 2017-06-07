@@ -131,6 +131,9 @@ To Do:
  09-04-2016 Added Time settings for wait time Get Ready auto adjust
  10-04-2016 Added Dutch help files
  22-05-2016 moved to Stable branch
+ V6.00 04-06-2017
+ 05-06-2017 Removed all LCD, DDS code for planning to only to support Voice and OLED in the near future
+ 06-06-2017 Huge code cleaning, added Sensor value showing/
  */
 
 //Note Audio pin 3 or 10. 82 Ohm and 470N in serie
@@ -171,15 +174,13 @@ To Do:
 
 ////////////////////////////////////////////
 
-#define I2C_ADDRESS 0x3C
 #include "SSD1306Ascii.h"
 #include "SSD1306AsciiAvrI2c.h"
-SSD1306AsciiAvrI2c oled;
 #include <SoftwareSerial.h>
 #include <NewTone.h>
 #include <EEPROM.h>
 
-
+#define I2C_ADDRESS 0x3C
 #define ARDUINO_RX 11 //should connect to TX of the Serial MP3 Player module
 #define ARDUINO_TX 12 //connect to RX of the module
 #define CMD_SET_VOLUME 0X06
@@ -289,6 +290,8 @@ SSD1306AsciiAvrI2c oled;
 SoftwareSerial mySerial(ARDUINO_RX, ARDUINO_TX);
 static int8_t     Send_buf[8]= {0};
 
+SSD1306AsciiAvrI2c oled;
+
 byte    AudioPin=               10;
 byte    SensorPin=              A3;
 
@@ -328,6 +331,7 @@ word    PitchStepValue=           300; // Around the 8 on target card
 word    MoveSensorWindowStepSize=   5; // In/Dec MoveWindow steps if Up or Down is pressed  //Make constant?? !!!
 byte    LogMode=                    0;
 word    LogCounter=                 0;
+long    LoopCounter=                0;
 byte    MP3Volume=                 25;
 byte    LogBufferStart=            50; 
 word    LogUpdTime=               250; //4 times a second for 1000 values about 4 Min. logging 
@@ -355,7 +359,7 @@ struct SettingsObj {
   byte PitchStep;
 };  
 
-word    DispUpdTime=            1000; //1 sec Screen update 
+word    DispUpdTime=          1000; //1 sec Screen update 
 char    *DisplayType[]=       {"None", "Value",  "Bar"};
 char    *WaveShapes[]=        {"Sine", "Triangle", "Square"};
 char    *YesNoArr[]=          {"N", "Y"};
@@ -481,12 +485,11 @@ void PlayMelody() {
   }
 }
 
-
 void LowReadWarning() {
     PlayTone(0,0); // Turn off the tone.
     WarningReading= Reading;
-      Beep(3,300);
-      //Say play sound 15
+    Beep(3,300);
+    //Say play sound 15
 }  
 
 String WordToStr(word Inp, byte Size) {
@@ -634,114 +637,115 @@ void InitKeyPad() {
   pinMode(Key5Pin,INPUT_PULLUP);
 }
  
-  byte DelaySecIntr(word Time, boolean Intr) {
-    byte KeyPressed;
-    while (KeyVal()) delay(100);  Intr= Intr; //Wait till key is released
-      if (Intr) {
-         Time= Time*800;
-         for (word X=0; X<Time; X++) {
-            KeyPressed= KeyVal();
-            if (KeyPressed) return KeyPressed;
-            delay(1);
-         }  
-      }else{
-        delay(Time);
-        return None; 
-      }
-      return None;
-  }  
+byte DelaySecIntr(word Time, boolean Intr) {
+  byte KeyPressed;
+  while (KeyVal()) delay(100);  Intr= Intr; //Wait till key is released
+  if (Intr) {
+     Time= Time*800;
+     for (word X=0; X<Time; X++) {
+        KeyPressed= KeyVal();
+        if (KeyPressed) return KeyPressed;
+        delay(1);
+     }  
+  }else{
+    delay(Time);
+    return None; 
+  }
+  return None;
+}  
   
 
-     void ShowOLED(String Text, byte X, byte Y, byte Font) {
-       if (Font==1) oled.setFont(X11fixed7x14); 
-       if (Font==2) oled.setFont(TimesNewRoman16_bold);
-       if (Font==3) oled.setFont(System5x7);
-       if (Font==4) oled.setFont(Wendy3x5);
-       if (Font==5) oled.setFont(lcdnums14x24);
-       oled.setCol(X); oled.setRow(Y);
-       oled.clearToEOL();
-       oled.print(Text);
-     }
+void ShowOLED(String Text, byte X, byte Y, byte Font) {
+   if (Font==1) oled.setFont(X11fixed7x14); 
+   if (Font==2) oled.setFont(TimesNewRoman16_bold);
+   if (Font==3) oled.setFont(System5x7);
+   if (Font==4) oled.setFont(Wendy3x5);
+   if (Font==5) oled.setFont(lcdnums14x24);
+   oled.setCol(X); oled.setRow(Y); //set cursor?
+   oled.clearToEOL();
+   oled.print(Text);
+}
      
-     void ShowValuesOLED() {
-        ShowOLED("Pitch     : "+(String)LowTone+".."+(String)HighTone,0,2,3);
-        ShowOLED("Sensor    : "+(String)MinValue+".."+(String)MaxValue,0,3,3);
-        ShowOLED("Curve     : "+(String)Curve,0,4,3); 
-        ShowOLED("Average   : "+(String)AvgModes[AverageValue],0,5,3);
-        ShowOLED("Samples   : "+(String)SampleModes[SampleSpeed],0,6,3);
-        ShowOLED("Pitch Step: "+(String)YesNoArr[PitchStep],0,7,3);
-     }
+void ShowValuesOLED() {
+    ShowOLED("Pitch     : "+(String)LowTone+".."+(String)HighTone,0,2,3);
+    ShowOLED("Sensor    : "+(String)MinValue+".."+(String)MaxValue,0,3,3);
+    ShowOLED("Curve     : "+(String)Curve,0,4,3); 
+    ShowOLED("Average   : "+(String)AvgModes[AverageValue],0,5,3);
+    ShowOLED("Samples   : "+(String)SampleModes[SampleSpeed],0,6,3);
+    ShowOLED("Pitch Step: "+(String)YesNoArr[PitchStep],0,7,3);
+}
 
-     void ShowSensorOLED(word Value) {
-        ShowOLED((String)Value,45,3,5);
-     }
+void ShowSensorOLED() {
+    ShowOLED((String)Reading,43,3,5);
+    ShowOLED("v "+(String)LowestReading,0,7,3);
+    //ShowOLED((String)LoopCounter,80,7,3);
+}
 
-     void ClearOLED() {
-        oled.clear();
-        ShowOLED("Kedok "+(String)Version+"           (c)", 0,0,2);
-     }
+void ClearOLED() {
+   oled.clear();
+   ShowOLED("Kedok "+(String)Version+"           (c)", 0,0,2);
+}
      
- 
-  void SendMP3Command(int8_t Command, int16_t Data) {
-     delay(20);
-    Send_buf[0] = 0x7e; //starting byte
-    Send_buf[1] = 0xff; //version
-    Send_buf[2] = 0x06; //the number of bytes of the command without starting byte and ending byte
-    Send_buf[3] = Command; //
-    Send_buf[4] = 0x00;//0x00 = no feedback, 0x01 = feedback
-    Send_buf[5] = (int8_t)(Data >> 8);//datah
-    Send_buf[6] = (int8_t)(Data); //datal
-    Send_buf[7] = 0xef; //ending byte
-    for(uint8_t I=0; I<8; I++) mySerial.write(Send_buf[I]) ;
-  }
+void SendMP3Command(int8_t Command, int16_t Data) {
+  delay(20);
+  Send_buf[0] = 0x7e; //starting byte
+  Send_buf[1] = 0xff; //version
+  Send_buf[2] = 0x06; //the number of bytes of the command without starting byte and ending byte
+  Send_buf[3] = Command; //
+  Send_buf[4] = 0x00;//0x00 = no feedback, 0x01 = feedback
+  Send_buf[5] = (int8_t)(Data >> 8);//datah
+  Send_buf[6] = (int8_t)(Data); //datal
+  Send_buf[7] = 0xef; //ending byte
+  for(uint8_t I=0; I<8; I++) mySerial.write(Send_buf[I]) ;
+}
 
-  void SetVolume(word Vol) {
-    SendMP3Command(CMD_SET_VOLUME, 0X0000+Vol);
-  } 
+void SetVolume(word Vol) {
+  SendMP3Command(CMD_SET_VOLUME, 0X0000+Vol);
+} 
 
-  void PlaySound(word Index, word Time) {
-     SendMP3Command(CMD_PLAY_FOLDER_FILE, MP3Language+Index);
-    DelaySecIntr(Time,true);
-  }
+void PlaySound(word Index, word Time) {
+  SendMP3Command(CMD_PLAY_FOLDER_FILE, MP3Language+Index);
+  DelaySecIntr(Time,true);
+}
 
-  void PlayNumber(word Nr, byte EnableTheValueText) {
-    if (EnableTheValueText) PlaySound(TheValueIsMP3,2);
-    if (Nr > 999) PlaySound(( Nr/1000),1);
-    if (Nr > 99)  PlaySound(((Nr/100)%10),1);
-    if (Nr > 9)   PlaySound(((Nr/10)%10),1);
-    PlaySound((Nr%10),3);
-  }
+void PlayNumber(word Nr, byte EnableTheValueText) {
+  if (EnableTheValueText) PlaySound(TheValueIsMP3,2);
+  if (Nr > 999) PlaySound(( Nr/1000),1);
+  if (Nr > 99)  PlaySound(((Nr/100)%10),1);
+  if (Nr > 9)   PlaySound(((Nr/10)%10),1);
+  PlaySound((Nr%10),3);
+}
 
-  void PlayHelp(byte Option) {
-    switch(Option) {
-      case  0: PlaySound(HelpSetVolumeMP3,8); break;
-      case  1: PlaySound(HelpSetMinimalSensorValueMP3,13); break;
-      case  2: PlaySound(HelpSetMaximalSensorValueMP3,13); break; 
-      case  3: PlaySound(HelpSetSensorThresholdValueMP3,10); break;
-      case  4: PlaySound(HelpSetSoundCurveValueMP3,11); break;
-      case  5: PlaySound(HelpSetPitchReverseMP3,9); break;
-      case  6: PlaySound(HelpSetAlwaysSoundMP3,8); break;
-      case  7: PlaySound(HelpSetLowestPitchMP3,7); break;  
-      case  8: PlaySound(HelpSetHigestPitchMP3,7); break;
-      case  9: PlaySound(HelpSetAutoAdjustWindowMP3,11); break;
-      case 10: PlaySound(HelpSetTimeToGetReadyMP3,10); break;
-      case 11: PlaySound(HelpSetSensorAverageCountMP3 ,9); break;
-      case 12: PlaySound(HelpSetSampleSpeedMP3 ,8); break;
-      case 13: PlaySound(HelpSetPitchStepMP3,12); break;
-      case 14: PlaySound(HelpRestoreFactorySettingsMP3,10); break;
-    }  
-  }
+void PlayHelp(byte Option) {
+  switch(Option) {
+    case  0: PlaySound(HelpSetVolumeMP3,8); break;
+    case  1: PlaySound(HelpSetMinimalSensorValueMP3,13); break;
+    case  2: PlaySound(HelpSetMaximalSensorValueMP3,13); break; 
+    case  3: PlaySound(HelpSetSensorThresholdValueMP3,10); break;
+    case  4: PlaySound(HelpSetSoundCurveValueMP3,11); break;
+    case  5: PlaySound(HelpSetPitchReverseMP3,9); break;
+    case  6: PlaySound(HelpSetAlwaysSoundMP3,8); break;
+    case  7: PlaySound(HelpSetLowestPitchMP3,7); break;  
+    case  8: PlaySound(HelpSetHigestPitchMP3,7); break;
+    case  9: PlaySound(HelpSetAutoAdjustWindowMP3,11); break;
+    case 10: PlaySound(HelpSetTimeToGetReadyMP3,10); break;
+    case 11: PlaySound(HelpSetSensorAverageCountMP3 ,9); break;
+    case 12: PlaySound(HelpSetSampleSpeedMP3 ,8); break;
+    case 13: PlaySound(HelpSetPitchStepMP3,12); break;
+    case 14: PlaySound(HelpRestoreFactorySettingsMP3,10); break;
+  }  
+}
 
-  byte KeyVal() {
-    if (!digitalRead(Key1Pin)) {PlayTone(1000,20); return Select;}
-    if (!digitalRead(Key2Pin)) {PlayTone(1000,20); return Down;}
-    if (!digitalRead(Key3Pin)) {PlayTone(1000,20); return Up;}
-    if (!digitalRead(Key4Pin)) {PlayTone(1000,20); return Right;}
-    if (!digitalRead(Key5Pin)) {PlayTone(1000,20); return Left;}
-    return None; //No key
-  }
+byte KeyVal() {
+  if (!digitalRead(Key1Pin)) {PlayTone(1000,20); return Select;}
+  if (!digitalRead(Key2Pin)) {PlayTone(1000,20); return Down;}
+  if (!digitalRead(Key3Pin)) {PlayTone(1000,20); return Up;}
+  if (!digitalRead(Key4Pin)) {PlayTone(1000,20); return Right;}
+  if (!digitalRead(Key5Pin)) {PlayTone(1000,20); return Left;}
+  return None; //No key
+}
 
-  void Menu() {
+void Menu() {
   ClearOLED();
   ShowOLED("Settings menu", 0,0,2);
   ShowOLED("Please wait...", 0,4,1);
@@ -780,9 +784,7 @@ void InitKeyPad() {
     switch(OptionNr) {
       case 0: Esc= false;
               while (!Esc) {
-                 
-                    ShowOLED("Volume: "+(String)MP3Volume, 0,4,1);
- 
+                 ShowOLED("Volume: "+(String)MP3Volume, 0,4,1);
                  PlayNumber(MP3Volume, 1);
                  if (KeyVal() == Up)       if (MP3Volume < 30) MP3Volume+= 1;
                  if (KeyVal() == Down)     if (MP3Volume >  5) MP3Volume-= 1;
@@ -794,9 +796,7 @@ void InitKeyPad() {
               break;
       case 1: Esc= false;
               while (!Esc) {
-                 
-                    ShowOLED("Min. Sensor: "+(String)MinValue, 0,4,1);
-
+                 ShowOLED("Min. Sensor: "+(String)MinValue, 0,4,1);
                  PlayNumber(MinValue, 1);
                  if (KeyVal() == Up)       if (MinValue < (MaxValue-20)) MinValue+= 5;
                  if (KeyVal() == Down)     if (MinValue > 10) MinValue-= 5;
@@ -807,9 +807,7 @@ void InitKeyPad() {
               break;
       case 2: Esc= false;
               while (!Esc) {
-                 
-                    ShowOLED("Max. Sensor: "+(String)MaxValue, 0,4,1);
-
+                 ShowOLED("Max. Sensor: "+(String)MaxValue, 0,4,1);
                  PlayNumber(MaxValue, 1);
                  if (KeyVal() == Up)       if (MaxValue < 990) MaxValue+= 5;
                  if (KeyVal() == Down)     if (MaxValue > (MinValue+20)) MaxValue-= 5;
@@ -820,9 +818,7 @@ void InitKeyPad() {
               break;
       case 3: Esc= false;
               while (!Esc) {
-                 
-                    ShowOLED("Threshold: "+(String)ThresholdWindow, 0,4,1);
-
+                 ShowOLED("Threshold: "+(String)ThresholdWindow, 0,4,1);
                  PlayNumber(ThresholdWindow, 1);
                  if (KeyVal() == Up)       if (ThresholdWindow < 190) ThresholdWindow+= 10;
                  if (KeyVal() == Down)     if (ThresholdWindow > 10)  ThresholdWindow-= 10;
@@ -833,9 +829,7 @@ void InitKeyPad() {
               break;     
       case 4: Esc= false;
               while (!Esc) {
-                 
-                    ShowOLED("Pitch Curve: "+(String)Curve, 0,4,1);
-
+                 ShowOLED("Pitch Curve: "+(String)Curve, 0,4,1);
                  PlayNumber(Curve, 1);
                  if (KeyVal() == Up)       if (Curve < 5) Curve++;
                  if (KeyVal() == Down)     if (Curve > 0) Curve--;
@@ -866,9 +860,7 @@ void InitKeyPad() {
               break;
       case 7: Esc= false;
               while (!Esc) {
-                 
-                    ShowOLED("Lo Pitch: "+(String)LowTone+" Hz", 0,4,1);
-
+                 ShowOLED("Lo Pitch: "+(String)LowTone+" Hz", 0,4,1);
                  PlayTone(LowTone,0);
                  delay(300);
                  if (KeyVal() == Down)     if (LowTone > 50) LowTone-= 50;
@@ -881,9 +873,7 @@ void InitKeyPad() {
               break;    
       case 8: Esc= false;
               while (!Esc) {
-                 
-                    ShowOLED("Hi Pitch: "+(String)HighTone+" Hz", 0,4,1);
-
+                 ShowOLED("Hi Pitch: "+(String)HighTone+" Hz", 0,4,1);
                  PlayTone(HighTone,0);
                  delay(300);
                  if (KeyVal() == Down)     if (HighTone > (LowTone+100)) HighTone-= 50;
@@ -896,9 +886,7 @@ void InitKeyPad() {
               break;  
       case 9: Esc= false;
               while (!Esc) {
-                
-                    ShowOLED("Auto adj. window: "+(String)AutoAdjustWindow, 0,4,1);
-
+                 ShowOLED("Auto adj. window: "+(String)AutoAdjustWindow, 0,4,1);
                  PlayNumber(AutoAdjustWindow, 1);
                  if (KeyVal() == Down)     if (AutoAdjustWindow > 50)   AutoAdjustWindow-= 10;
                  if (KeyVal() == Up)       if (AutoAdjustWindow < 300)  AutoAdjustWindow+= 10;
@@ -909,9 +897,7 @@ void InitKeyPad() {
               break;
      case 10: Esc= false;
               while (!Esc) {
-                 
-                    ShowOLED("Get ready time: "+(String)GetReadyTime+" s.", 0,4,1);
-
+                 ShowOLED("Get ready time: "+(String)GetReadyTime+" s.", 0,4,1);
                  PlayNumber(GetReadyTime, 1);
                  if (KeyVal() == Down)     if (GetReadyTime > 2)       GetReadyTime-= 1;
                  if (KeyVal() == Up)       if (GetReadyTime < 20)      GetReadyTime+= 1;
@@ -922,9 +908,7 @@ void InitKeyPad() {
               break;             
      case 11: Esc= false;
               while (!Esc) {
-                
-                    ShowOLED("Averaging: "+(String)AvgModes[AverageValue], 0,4,1);
-
+                 ShowOLED("Averaging: "+(String)AvgModes[AverageValue], 0,4,1);
                  if (AverageValue == 0)    PlaySound(DisableMP3,4); //beter uitleg? disabled als niet actief?
                  if (AverageValue == 1)    PlaySound(LowMP3,4);
                  if (AverageValue == 2)    PlaySound(MediumMP3,4); 
@@ -938,9 +922,7 @@ void InitKeyPad() {
               break;
      case 12: Esc= false;
               while (!Esc) {
-                 
-                    ShowOLED("Speed: "+(String)SampleModes[SampleSpeed], 0,4,1);
-
+                 ShowOLED("Speed: "+(String)SampleModes[SampleSpeed], 0,4,1);
                  if (SampleSpeed == 0)     PlaySound(FastMP3,4);
                  if (SampleSpeed == 1)     PlaySound(MediumMP3,4); 
                  if (SampleSpeed == 2)     PlaySound(SlowMP3,4);
@@ -954,9 +936,7 @@ void InitKeyPad() {
               break; 
      case 13: Esc= false;
               while (!Esc) {
-                
-                    ShowOLED("Pitch step: "+(String)YesNoArr[PitchStep], 0,4,1);
-
+                 ShowOLED("Pitch step: "+(String)YesNoArr[PitchStep], 0,4,1);
                  if (PitchStep) PlaySound(PitchStepEnabledMP3,4); else PlaySound(PitchStepDisabledMP3,4); 
                  if (KeyVal() == Up)       if (PitchStep < 1) PitchStep++;
                  if (KeyVal() == Down)     if (PitchStep > 0) PitchStep--;
@@ -968,9 +948,7 @@ void InitKeyPad() {
      case 14: Esc= false;
               boolean SetToDefaults= false; 
               while (!Esc) {
-                 
-                    ShowOLED("Factory reset: "+(String)YesNoArr[SetToDefaults], 0,4,1);
-
+                 ShowOLED("Factory reset: "+(String)YesNoArr[SetToDefaults], 0,4,1);
                  if (SetToDefaults) PlaySound(RestoreFactoryDefaultsEnabledMP3,4); else PlaySound(RestoreFactoryDefaultsDisabledMP3,4); 
                  if (KeyVal() == Up)        if (SetToDefaults < 1) SetToDefaults= true;
                  if (KeyVal() == Down)      if (SetToDefaults > 0) SetToDefaults= false;
@@ -992,38 +970,37 @@ void InitKeyPad() {
     if (LogMode==1) LogCounter= 0;  
     ClearOLED();
     ShowValuesOLED();
-  }
+}
 
 
 void setup() {
   //Pinmode for audio pin????  
   //pinMode(AudioPin, OUTPUT);
   pinMode(SensorPin, INPUT);
+  oled.begin(&Adafruit128x64, I2C_ADDRESS);
   InitKeyPad();
-
- oled.begin(&Adafruit128x64, I2C_ADDRESS);
- ClearOLED();
- ShowOLED("Initialize...", 0,4,2);
+  ClearOLED();
+  ShowOLED("Initialize...", 0,4,2);
   Serial.begin(9600);
   if (EEPROM.read(0)==1) ReadConfig();
   else WriteConfig();
   PrevLogTime= millis();
   LowestReading= MaxValue;
   WarningReading= MinValue;
-    mySerial.begin(9600);
-    delay(500);//Wait chip initialization is complete
-    SendMP3Command(CMD_SEL_DEV, DEV_TF);//select the TF card  
-    delay(500);
-    SetVolume(MP3Volume);
-    PlaySound(WelcomeMP3,4);
-    ShowValuesOLED();
+  mySerial.begin(9600);
+  delay(500);//Wait chip initialization is complete
+  SendMP3Command(CMD_SEL_DEV, DEV_TF);//select the TF card  
+  delay(500);
+  SetVolume(MP3Volume);
+  PlaySound(WelcomeMP3,4);
+  ShowValuesOLED();
 }
 
 void loop() {
   Reading= ReadValue(AverageValue);
   if (Display) {
      if ((millis()-PrevDispTime) > DispUpdTime) {
-        ShowSensorOLED(Reading);
+        ShowSensorOLED();
         PrevDispTime= millis();
      }
   } 
@@ -1046,20 +1023,24 @@ void loop() {
 
   if (Reading < LowestReading) LowestReading= Reading; 
 
-    KeyPressed= KeyVal();
-    if (KeyPressed) {  
-      if (KeyPressed == Select)    Menu();
-      if (KeyPressed == Right)     AutoAdjust();
-      if (KeyPressed == Left)      {ClearOLED(); delay(300); Display= !Display;}
-      if (KeyPressed == Down)      MoveSensorWindow(0-MoveSensorWindowStepSize);
-      if (KeyPressed == Up)        MoveSensorWindow(MoveSensorWindowStepSize);
-      //ToDo add more
-    }
+  KeyPressed= KeyVal();
+  if (KeyPressed) {  
+    if (KeyPressed == Select)    Menu();
+    if (KeyPressed == Right)     AutoAdjust();
+    if (KeyPressed == Left)      { 
+                                   ClearOLED();
+                                   if (Display) ShowValuesOLED();
+                                   delay(300);
+                                   Display= !Display;
+                                 }
+    if (KeyPressed == Down)      MoveSensorWindow(0-MoveSensorWindowStepSize);
+    if (KeyPressed == Up)        MoveSensorWindow(MoveSensorWindowStepSize);
+    //ToDo add more
+  }
 
   if (SampleSpeed) delay((1 << SampleSpeed-1)*5); //0,5,10,20  
 
-  //  LoopCounter++;
-  
+  //LoopCounter++;
 }
 
 
