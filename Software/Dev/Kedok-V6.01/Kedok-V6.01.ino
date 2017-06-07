@@ -566,6 +566,7 @@ void AutoAdjust() {
    PlaySound(AutoAdjustFinishedMP3,4);
    ShowOLED("Enjoy shooting!", 0,4,1);
    PlaySound(HaveFunShootingMP3,4);
+   DisplaySensorReadings= false;
    UpdateDisplay();
 } 
 
@@ -630,8 +631,9 @@ void ShowOLED(String Text, byte X, byte Y, byte Font) {
 void UpdateDisplay() {
   if (DisplaySensorReadings) {
     ShowOLED((String)Reading,43,3,5);
-    ShowOLED("v "+(String)LowestReading,0,7,3); 
+    ShowOLED("L:"+(String)LowestReading,0,7,3); 
   }else{
+    ClearOLED();
     ShowOLED("Pitch     : "+(String)LowTone+".."+(String)HighTone,0,2,3);
     ShowOLED("Sensor    : "+(String)MinValue+".."+(String)MaxValue,0,3,3);
     ShowOLED("Curve     : "+(String)Curve,0,4,3); 
@@ -920,7 +922,7 @@ void Menu() {
     ShowOLED("Leaving menu", 0,4,1);
     PlayTone(0,0);  
     PlaySound(ExitOptionsMenuMP3,4);
-    ClearOLED();
+    DisplaySensorReadings= false;
     UpdateDisplay();
 }
 
@@ -944,6 +946,7 @@ void setup() {
   delay(500);
   SetVolume(MP3Volume);
   PlaySound(WelcomeMP3,4);
+  DisplaySensorReadings= false;
   UpdateDisplay();
 }
 
