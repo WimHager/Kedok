@@ -42,7 +42,7 @@ To Do:
  Prepare for setting EMA
  //Lower on screen message
  New sound for leaving menu without data saved 33 english only
-
+ Bar in display
 
  Battery level check?
  Start to add a i2c ADS1015 12-Bit ADC - 4 Channel 
@@ -633,10 +633,17 @@ void ShowOLED(String Text, byte X, byte Y, byte Font) {
    oled.print(Text);
 }
 
+void ShowBargraph() {
+   word BarLenght= 10-((Reading-MinValue)/20);
+   ShowOLED("B:"+(String)BarLenght,40,7,3);
+}
+     
 void UpdateDisplay() {
   if (DisplaySensorReadings) {
     ShowOLED((String)Reading,43,3,5);
-    ShowOLED("L:"+(String)LowestReading+"   S:"+(String)map(Reading,MinValue,MaxValue,10,0)+"   C:"+(String)LoopCounter,0,7,3);
+    ShowOLED("L:"+(String)LowestReading,0,7,3);
+    ShowBargraph(); 
+    ShowOLED("C:"+(String)LoopCounter,90,7,3); 
     LoopCounter= 0;
   }else{
     ClearOLED();
