@@ -40,6 +40,7 @@ To Do:
  //Remove Melody
  //add loop speed
  Prepare for setting EMA
+ Lowest read fault by ema
  //Lower on screen message
  New sound for leaving menu without data saved 33 english only
 
@@ -335,6 +336,7 @@ word    MoveSensorWindowStepSize=   5; // In/Dec MoveWindow steps if Up or Down 
 long    LoopCounter=                0;
 byte    MP3Volume=                 25;
 byte    AverageValue=               1; //Read 0 values to average, Default none. Steps 0,5,20,85
+byte    EMA=                        9; //Exponential Moving Average
 byte    SampleSpeed=                0; //Loop delay 0,5,10,20
 byte    PitchStep=                  0; //Disables or enables Pitch step feature
 byte    DisplaySensorReadings=      0;
@@ -354,13 +356,14 @@ struct SettingsObj {
   byte MP3Volume;
   byte DisplaySensorReadings;
   byte AverageValue;
+  byte EMA;
   byte SampleSpeed;
   byte PitchStep;
 };  
 
 word    DispUpdTime=          1000; //1 sec Screen update 
 char    *YesNoArr[]=          {"N", "Y"};
-char    *AvgModes[]=          {"Disable", "Low", "Medium", "Maximal"};
+char    *AvgModes[]=          {"None", "Low", "Medium", "Maximal"};
 char    *SampleModes[]=       {"Fast", "Medium", "Slow", "Slowest"};
 char    *EnableDisableArr[]=  {"Disable","Enable"};
 long    PrevDispTime;
@@ -392,6 +395,7 @@ void WriteConfig() {
     MP3Volume,
     DisplaySensorReadings,
     AverageValue,
+    EMA,
     SampleSpeed,
     PitchStep,
   };  
@@ -417,6 +421,7 @@ void ReadConfig() {
   MP3Volume= CurSettings.MP3Volume;
   DisplaySensorReadings= CurSettings.DisplaySensorReadings;
   AverageValue= CurSettings.AverageValue;
+  EMA=CurSettings.EMA;
   SampleSpeed= CurSettings.SampleSpeed;
   PitchStep= CurSettings.PitchStep;
   ShowOLED("Reading config..", 0,4,1);
@@ -450,18 +455,26 @@ float fscale( float originalMin, float originalMax, float newBegin, float newEnd
   return rangedValue;
 }
 
-word EmaFilter(word Inp, float Alpha) { //Alpha in range of 0.1..0.9
+word EmaFilter(word Inp, float Alpha) { //Alpha in range of 1..9
   static word EmaVal;
+  Alpha= Alpha/10;
   EmaVal= (Alpha*Inp) +((1-Alpha)*EmaVal);
   return EmaVal;
 }
 
+/*
 word ReadValue(word AvgVal) { 
   if (!AverageValue) return analogRead(SensorPin); // For the sake of speed
   unsigned long ValueSum= 0;
   AvgVal= pow(AvgVal,4)+4; //Creates avg. steps of 5, 20, 85
   for (long X=0; X<AverageValue; X++) ValueSum+= analogRead(SensorPin);
   return ValueSum/AverageValue;
+}
+*/
+
+word ReadValue(word AvgVal) { 
+  if (!AverageValue) return analogRead(SensorPin); // For the sake of speed
+  return EmaFilter(analogRead(SensorPin),11-(AvgVal*3)); //Creates 1=8 Low,2=5 Medium, 3=2 High
 }
 
 void PlayTone(word Tone, word Duration) {
@@ -860,7 +873,7 @@ void Menu() {
               break;
      case 10: Esc= false;
               while (!Esc) {
-                 ShowOLED("Get ready time: "+(String)GetReadyTime+" s.", 0,4,1);
+                 ShowOLED("Ready timer: "+(String)GetReadyTime+" s.", 0,4,1);
                  PlayNumber(GetReadyTime, 1);
                  if (KeyVal() == Down)     if (GetReadyTime > 2)       GetReadyTime-= 1;
                  if (KeyVal() == Up)       if (GetReadyTime < 20)      GetReadyTime+= 1;
@@ -918,6 +931,7 @@ void Menu() {
                  if (KeyVal() == Right)     PlayHelp(OptionNr); 
                  if (KeyVal() == Left)      Esc= true;
                  if (KeyVal() == Select)    if (SetToDefaults) {
+                                               ShowOLED("Reset to defaults.", 0,4,1);
                                                PlaySound(AllSettingsResetToDefaultsMP3,4);
                                                EEPROM.write(0,0); 
                                                Reset(); 
@@ -940,7 +954,7 @@ void setup() {
   oled.begin(&Adafruit128x64, I2C_ADDRESS);
   InitKeyPad();
   ClearOLED();
-  ShowOLED("Initialize...", 0,4,2);
+  //ShowOLED("Initialize...", 0,4,2); //does not show??
   Serial.begin(9600);
   if (EEPROM.read(0)==1) ReadConfig();
   else WriteConfig();
@@ -953,6 +967,7 @@ void setup() {
   SetVolume(MP3Volume);
   PlaySound(WelcomeMP3,4);
   DisplaySensorReadings= false;
+  for (byte X=0; X<255; X++) ReadValue(AverageValue); //clear EMA filter
   UpdateDisplay();
 }
 
@@ -980,7 +995,7 @@ void loop() {
         else PlayTone(0,0); // Turn off the tone. 
 //-----------------
 
-  if (Reading < LowestReading) LowestReading= Reading; 
+  if (Reading < LowestReading) LowestReading= analogRead(SensorPin); //Dirty, but avoids storing an average reading
 
   KeyPressed= KeyVal();
   if (KeyPressed) {  
