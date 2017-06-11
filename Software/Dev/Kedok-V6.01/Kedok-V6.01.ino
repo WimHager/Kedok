@@ -40,10 +40,11 @@ To Do:
  //Remove Melody
  //add loop speed
  Prepare for setting EMA
- Lowest read fault by ema
+ //Lowest read fault by ema
+ Remove EMA from eeprom use average instead
  //Lower on screen message
- New sound for leaving menu without data saved 33 english only
-
+ Start Batt check funtction
+ New sound for leaving menu without data saved 33 in english only
 
  Battery level check?
  Start to add a i2c ADS1015 12-Bit ADC - 4 Channel 
@@ -58,7 +59,6 @@ To Do:
  Set Hightone default 300 lower if Pitchstep is enabled
  Remove Log option, it is never used.
  Add change owner name with buttons.
- Smoothing filter, Exponential Filter. filter.h
  Bug LowReadWarning()  must say lower sensor value
  //ShowLCD bug. no clear
  //Always Sound does not work if DDS connected.
@@ -328,7 +328,7 @@ byte    WaveShape=                  0;
 byte    PitchRev=               false;
 byte    AlwaysSound=            false; 
   
-word    AutoAdjustWindow=         200; // Normal card size
+word    AutoAdjustWindow=         200; // Normal pistol card size
 byte    ThresholdWindow=          150; 
 byte    GetReadyTime=              15; // 15 Seconds
 word    PitchStepValue=           300; // Around the 8 on target card
@@ -428,6 +428,20 @@ void ReadConfig() {
   PlaySound(ReadConfigMP3,4);
 }
 
+long ReadVcc() {
+  // Read 1.1V reference against AVcc
+  // set the reference to Vcc and the measurement to the internal 1.1V reference
+  ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
+  delay(2); // Wait for Vref to settle
+  ADCSRA |= _BV(ADSC); // Start conversion
+  while (bit_is_set(ADCSRA,ADSC)); // measuring
+  uint8_t low  = ADCL; // must read ADCL first - it then locks ADCH  
+  uint8_t high = ADCH; // unlocks both
+  long result = (high<<8) | low;
+  result = 1125300L / result; // Calculate Vcc (in mV); 1125300 = 1.1*1023*1000
+  return result; // Vcc in millivolts
+}
+
 float fscale( float originalMin, float originalMax, float newBegin, float newEnd, float inputValue, float Curve){
   float   OriginalRange=    0;
   float   NewRange=         0;
@@ -509,9 +523,11 @@ String WordToStr(word Inp, byte Size) {
   return Str; 
 }  
 
+/*
 boolean InRange() {
   return ((Reading > MinValue) && (Reading < MaxValue));
 }
+*/
 
 void MoveSensorWindow(int Val) {
   MinValue= MinValue + Val;
@@ -954,7 +970,9 @@ void setup() {
   oled.begin(&Adafruit128x64, I2C_ADDRESS);
   InitKeyPad();
   ClearOLED();
-  //ShowOLED("Initialize...", 0,4,2); //does not show??
+  ShowOLED((String)ReadVcc(),43,3,5);
+  delay(3000);
+  ClearOLED();
   Serial.begin(9600);
   if (EEPROM.read(0)==1) ReadConfig();
   else WriteConfig();
@@ -1003,6 +1021,7 @@ void loop() {
     if (KeyPressed == Right)     AutoAdjust();
     if (KeyPressed == Left)      { 
                                    ClearOLED();
+                                   LowestReading= MaxValue; //Reset low read.
                                    delay(300);
                                    DisplaySensorReadings= !DisplaySensorReadings;
                                    UpdateDisplay();
