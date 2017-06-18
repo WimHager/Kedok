@@ -14,7 +14,7 @@ word    MP3Language=       0X0200; //0X0100 English 0X0200 Dutch
 //=================================================================================================================
 
 /*
-    Kedok (audio aiming device), Copyright 2016 Wim Hager
+    Kedok (audio aiming device), Copyright 2017 Wim Hager
     Kedok is distributed under the terms of the GNU GPL
     
     Kedok is free software: you can redistribute it and/or modify
@@ -44,7 +44,11 @@ To Do:
  Remove EMA from eeprom use average instead
  //Lower on screen message
  Start Batt check funtction
- New sound for leaving menu without data saved 33 in english only
+ //New sound for leaving menu without data saved message  mp3 no. 33 english only
+ Test with SSD1306AsciiWire.h too, instead  of AVR SSD1306AsciiAvrI2c.h
+ //Speech for average,  make it filter no 071
+ add compile date maybe in eeprom as serial number Serial.println( "Compiled: " __DATE__ ", " __TIME__ ", " __VERSION__);
+ if sensor read is < 50 try to switch off. Probably headset connected to the unit.
 
  Battery level check?
  Start to add a i2c ADS1015 12-Bit ADC - 4 Channel 
@@ -146,7 +150,7 @@ To Do:
  06-06-2017 Huge code cleaning, added Sensor value showing/
  */
 
-//Note Audio pin 3 or 10. 82 Ohm and 470N in serie
+//Note Audio pin 10. 
 //Opto resistor 68K
 //Loops FAST:     1600
 //      MEDIUM:    180
@@ -186,6 +190,7 @@ To Do:
 
 #include "SSD1306Ascii.h"
 #include "SSD1306AsciiAvrI2c.h"
+//#include "SSD1306AsciiWire.h"
 #include <SoftwareSerial.h>
 #include <NewTone.h>
 #include <EEPROM.h>
@@ -233,7 +238,8 @@ To Do:
 #define SetSampleSpeedMP3                   59
 #define SetVolumeMP3                        27 
 #define SetAlwaysSoundMP3                   43
-#define SetSensorAverageCountMP3            51         
+#define SetSensorAverageCountMP3            51
+#define SetSensorAverageFilterMP3           71        
 #define RestoreFactorySettingsMP3           18
 #define LowerMinimalSettingMP3              15
 #define PrepareWeaponForAimingMP3           17
@@ -287,7 +293,8 @@ To Do:
 #define HelpSetTimeToGetReadyMP3           161 
 #define HelpSetSampleSpeedMP3              159
 #define HelpSetVolumeMP3                   127 
-#define HelpSetSensorAverageCountMP3       151  
+#define HelpSetSensorAverageCountMP3       151
+#define HelpSetSensorAverageFilterMP3      171
 #define HelpSetAlwaysSoundMP3              143  
 #define HelpRestoreFactorySettingsMP3      118
 #define HelpSetPitchStepMP3                168 
@@ -315,7 +322,6 @@ const  byte       Value=          1;
 const  byte       Bar=            2;
 const  boolean    Disable=     true;
 const  boolean    Enable=     false;
-const  char       EmptyLine[17]=  "                ";
 
 word    MinValue=                 100;
 word    MaxValue=                 800;
@@ -335,8 +341,8 @@ word    PitchStepValue=           300; // Around the 8 on target card
 word    MoveSensorWindowStepSize=   5; // In/Dec MoveWindow steps if Up or Down is pressed  //Make constant?? !!!
 long    LoopCounter=                0;
 byte    MP3Volume=                 25;
-byte    AverageValue=               1; //Read 0 values to average, Default none. Steps 0,5,20,85
-byte    EMA=                        9; //Exponential Moving Average
+byte    AverageValue=               1; //Read 0 values to average, Default Minimal
+//byte    EMA=                        9; //Exponential Moving Average
 byte    SampleSpeed=                0; //Loop delay 0,5,10,20
 byte    PitchStep=                  0; //Disables or enables Pitch step feature
 byte    DisplaySensorReadings=      0;
@@ -356,7 +362,7 @@ struct SettingsObj {
   byte MP3Volume;
   byte DisplaySensorReadings;
   byte AverageValue;
-  byte EMA;
+  //byte EMA;
   byte SampleSpeed;
   byte PitchStep;
 };  
@@ -395,7 +401,7 @@ void WriteConfig() {
     MP3Volume,
     DisplaySensorReadings,
     AverageValue,
-    EMA,
+    //EMA,
     SampleSpeed,
     PitchStep,
   };  
@@ -421,7 +427,7 @@ void ReadConfig() {
   MP3Volume= CurSettings.MP3Volume;
   DisplaySensorReadings= CurSettings.DisplaySensorReadings;
   AverageValue= CurSettings.AverageValue;
-  EMA=CurSettings.EMA;
+  //EMA=CurSettings.EMA;
   SampleSpeed= CurSettings.SampleSpeed;
   PitchStep= CurSettings.PitchStep;
   ShowOLED("Reading config..", 0,4,1);
@@ -469,7 +475,8 @@ float fscale( float originalMin, float originalMax, float newBegin, float newEnd
   return rangedValue;
 }
 
-word EmaFilter(word Inp, float Alpha) { //Alpha in range of 1..9
+//When α is close to 1, dampening is quick and when α is close to 0, dampening is slow. in Benjamins test, 0.2 was nice for him
+word EmaFilter(word Inp, float Alpha) { //Alpha in range of 9..1  
   static word EmaVal;
   Alpha= Alpha/10;
   EmaVal= (Alpha*Inp) +((1-Alpha)*EmaVal);
@@ -541,9 +548,11 @@ void MoveSensorWindow(int Val) {
   //delay(500);
 }  
 
+/*
 void EEPromClear() {
   for (int I = 0; I < 999; I++) EEPROM.write(I, 0); //reserve 1000 to 1023 for serial number
 }
+*/
 
 void AutoAdjust() {
   word Reading;
@@ -721,7 +730,7 @@ void PlayHelp(byte Option) {
     case  8: PlaySound(HelpSetHigestPitchMP3,7); break;
     case  9: PlaySound(HelpSetAutoAdjustWindowMP3,11); break;
     case 10: PlaySound(HelpSetTimeToGetReadyMP3,10); break;
-    case 11: PlaySound(HelpSetSensorAverageCountMP3 ,9); break;
+    case 11: PlaySound(HelpSetSensorAverageFilterMP3,14); break;
     case 12: PlaySound(HelpSetSampleSpeedMP3 ,8); break;
     case 13: PlaySound(HelpSetPitchStepMP3,12); break;
     case 14: PlaySound(HelpRestoreFactorySettingsMP3,10); break;
@@ -759,7 +768,7 @@ void Menu() {
         case  8: ShowOLED("[Higest pitch]", 0,4,1); PlaySound(SetHigestPitchMP3,8); break;
         case  9: ShowOLED("[Auto adj. window]", 0,4,1); PlaySound(SetAutoAdjustWindowMP3,8); break;
         case 10: ShowOLED("[Get ready time]", 0,4,1); PlaySound(SetTimeToGetReadyMP3,8); break;
-        case 11: ShowOLED("[Average]", 0,4,1); PlaySound(SetSensorAverageCountMP3 ,8); break;
+        case 11: ShowOLED("[Average]", 0,4,1); PlaySound(SetSensorAverageFilterMP3,8); break;
         case 12: ShowOLED("[Sample speed]", 0,4,1); PlaySound(SetSampleSpeedMP3,8); break;
         case 13: ShowOLED("[Pitch step]", 0,4,1); PlaySound(SetPitchStepMP3,8); break;
         case 14: ShowOLED("[Factory settings]", 0,4,1); PlaySound(RestoreFactorySettingsMP3,8); break;                
@@ -901,7 +910,7 @@ void Menu() {
      case 11: Esc= false;
               while (!Esc) {
                  ShowOLED("Averaging: "+(String)AvgModes[AverageValue], 0,4,1);
-                 if (AverageValue == 0)    PlaySound(DisableMP3,4); //beter uitleg? disabled als niet actief?
+                 if (AverageValue == 0)    PlaySound(DisableMP3,4); 
                  if (AverageValue == 1)    PlaySound(LowMP3,4);
                  if (AverageValue == 2)    PlaySound(MediumMP3,4); 
                  if (AverageValue == 3)    PlaySound(HighMP3,4);
@@ -966,6 +975,7 @@ void Menu() {
 void setup() {
   //Pinmode for audio pin????  
   //pinMode(AudioPin, OUTPUT);
+  //TWBR = 200; //Slow i2c bus
   pinMode(SensorPin, INPUT);
   oled.begin(&Adafruit128x64, I2C_ADDRESS);
   InitKeyPad();
@@ -973,7 +983,7 @@ void setup() {
   ShowOLED((String)ReadVcc(),43,3,5);
   delay(3000);
   ClearOLED();
-  Serial.begin(9600);
+  //Serial.begin(9600);
   if (EEPROM.read(0)==1) ReadConfig();
   else WriteConfig();
   LowestReading= MaxValue;
