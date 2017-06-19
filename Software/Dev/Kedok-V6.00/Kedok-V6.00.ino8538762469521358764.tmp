@@ -35,7 +35,18 @@ word    MP3Language=       0X0200; //0X0100 English 0X0200 Dutch
 
 To Do:
 
+ //Remove unneeded eeprom settings, Dispay, Logging.
+ //Remove all logging modes.
+ //Remove Melody
+ //add loop speed
+ Prepare for setting EMA
+ //Lowest read fault by ema
+ //Remove EMA from eeprom use average instead
+ //Lower on screen message
  Start Batt check funtction
+ //New sound for leaving menu without data saved message  mp3 no. 33 english only
+ //Test with SSD1306AsciiWire.h too, instead  of AVR SSD1306AsciiAvrI2c.h
+ //Speech for average,  make it filter no 071
  add compile date maybe in eeprom as serial number Serial.println( "Compiled: " __DATE__ ", " __TIME__ ", " __VERSION__);
  if sensor read is < 50 try to switch off. Probably headset connected to the unit.
  Start with back in the menu, not just leave it.
@@ -49,8 +60,52 @@ To Do:
  Add option to save users presets
  Change delay's in speech, some are utterly slow alo improve saying values (remove "value is" in some cases) 
  Beginners mode, wide window
+ Test PitchStep feature
  Set Hightone default 300 lower if Pitchstep is enabled
+ Remove Log option, it is never used.
  Add change owner name with buttons.
+ Bug LowReadWarning()  must say lower sensor value
+ //ShowLCD bug. no clear
+ //Always Sound does not work if DDS connected.
+ //Triangle wave still gives a beep when fequency is set to zero,
+ //Buggy at B28 Setting, needs a full test.
+ //Full test if without DDS module
+ //Adding new 1 x 5 membrane Keypad speech version
+ //Changed MoveSensorWindowStepSize from 10 to 5 if shooter presses UP Or Down while shooting 
+ //Added PitchStep feature
+ //UP and Down buttons, Speedup
+ //Rename Treshhold to Lead in
+ //Test Factory settings with speech
+ //Change text for 055-Sensor Level To High.mp3. Say the value.
+ //Add parameter to enable/disable  say value is. 
+ //Add speech say freqency at save
+ //Add English Help files
+ //Add smooth tone 
+ //Sound menu options for average and loop speed
+ //Auto calibrate does not start
+ //Option to set loop speed
+ //Add AutoAdjustGetReadyTime to menu as option
+ //Say calibratie value
+ //MP3 Beep if keypressed       
+ //Rollback from 3v3 mod. Does not work well with LCD keypad output on A0
+ //No need to save logmode in eeprom
+ //Logmode in display Only in No Display mode
+ //Reverse Pitch
+ //Save Setting as structure???
+ //Always Sound. Added not tested yet!!
+ //Removed "Always sound" no-one liked it.
+ //new inrange for bar reading
+ //Better way to find the target card. Idea:  if sensor-read < Min + 2 x Windowsize set sensor window twice the size
+ //SetSensorWindowToLowestRead()
+ //Make WordToStr better so it fits all sizes
+ //Bug. while adjusting the MIN or UP parameter while shooting screen dos not return to running if Display is off.
+ //Menu option to set auto adjust window, Benjamin prefers a window of 100 and a gain of -3
+ //Test if gain is reverse. Negative etting gives a positve gain. 
+ //Sound during auto adjust wait.
+ //More info if display readings. Sensor Min Max Lowest
+ //Auto adjust auto stop if no lower reading  within 12 sec.
+ //Show settings instead of Running ... if displaymode is off
+ //Logging
  
  V2.00 18-4-2015
  Compiled with 1.0.5
@@ -92,12 +147,9 @@ To Do:
  10-04-2016 Added Dutch help files
  22-05-2016 moved to Stable branch
  V6.00 04-06-2017
- 04-06-2017 New Kedok, Voice and O-Led display
  05-06-2017 Removed all LCD, DDS code for planning to only to support Voice and OLED in the near future
- 06-06-2017 Huge code cleaning, added Sensor value showing
- 15-06-2017 Remove all logging modes.
- 15-06-2017 New EMA filter
-*/
+ 06-06-2017 Huge code cleaning, added Sensor value showing/
+ */
 
 //Note Audio pin 10. 
 //Opto resistor 68K
@@ -278,7 +330,7 @@ word    LowTone=                  100;
 word    HighTone=                1750;
 
 byte    Curve=                      0;
-//byte    WaveShape=                  0; //can be removed
+byte    WaveShape=                  0;
 byte    PitchRev=               false;
 byte    AlwaysSound=            false; 
   
@@ -292,13 +344,15 @@ byte    MP3Volume=                 25;
 byte    AverageValue=               1; //Read 0 values to average, Default Minimal
 byte    SampleSpeed=                0; //Loop delay 0,5,10,20
 byte    PitchStep=                  0; //Disables or enables Pitch step feature
-byte    DisplaySensorReadings=      0; 
+byte    DisplaySensorReadings=      0;
+
 
 struct SettingsObj {
   word MinValue;
   word MaxValue;
   byte ThresholdWindow;
   byte Curve;
+  byte WaveShape;
   byte PitchRev;
   byte AlwaysSound;  
   word AutoAdjustWindow;
@@ -306,6 +360,7 @@ struct SettingsObj {
   word LowTone;
   word HighTone;
   byte MP3Volume;
+  byte DisplaySensorReadings;
   byte AverageValue;
   byte SampleSpeed;
   byte PitchStep;
@@ -335,6 +390,7 @@ void WriteConfig() {
     MaxValue,
     ThresholdWindow,
     Curve,
+    WaveShape,
     PitchRev,
     AlwaysSound,
     AutoAdjustWindow,
@@ -342,6 +398,7 @@ void WriteConfig() {
     LowTone,
     HighTone,
     MP3Volume,
+    DisplaySensorReadings,
     AverageValue,
     SampleSpeed,
     PitchStep,
@@ -364,12 +421,14 @@ void ReadConfig() {
   ThresholdWindow= CurSettings.ThresholdWindow;
   GetReadyTime= CurSettings.GetReadyTime;
   Curve= CurSettings.Curve;
+  WaveShape= CurSettings.WaveShape;
   PitchRev= CurSettings.PitchRev;
   AlwaysSound= CurSettings.AlwaysSound;
   AutoAdjustWindow= CurSettings.AutoAdjustWindow;
   LowTone= CurSettings.LowTone;
   HighTone= CurSettings.HighTone;
   MP3Volume= CurSettings.MP3Volume;
+  DisplaySensorReadings= CurSettings.DisplaySensorReadings;
   AverageValue= CurSettings.AverageValue;
   SampleSpeed= CurSettings.SampleSpeed;
   PitchStep= CurSettings.PitchStep;
@@ -696,7 +755,6 @@ void Menu() {
   byte OptionNr= 0;
   PlaySound(SettingsMenuMP3,3);
   PlaySound(SelectTheOptionMP3,5);
-  while (false==false) {
   boolean Esc= false;
   while(!Esc) {
       switch (OptionNr) {
@@ -907,7 +965,6 @@ void Menu() {
               }
               break;                        
     }
- }// master loop
     ShowOLED("Leaving menu", 0,4,1);
     PlayTone(0,0);  
     PlaySound(ExitOptionsMenuMP3,4);
@@ -988,7 +1045,7 @@ void loop() {
     //ToDo add more
   }
 
-  if (SampleSpeed) delay((1 << (SampleSpeed-1))*5); //0,5,10,20  
+  if (SampleSpeed) delay((1 << SampleSpeed-1)*5); //0,5,10,20  
 
   LoopCounter++;
 }

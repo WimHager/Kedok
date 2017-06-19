@@ -688,44 +688,47 @@ byte KeyVal() {
   return None; //No key
 }
 
-void Menu() {
-  ClearOLED();
-  ShowOLED("Settings menu", 0,0,2);
-  ShowOLED("Please wait...", 0,4,1);
-  PlayTone(0,0);
+byte MainMenuSelection() {
   byte OptionNr= 0;
   PlaySound(SettingsMenuMP3,3);
   PlaySound(SelectTheOptionMP3,5);
-  while (false==false) {
   boolean Esc= false;
   while(!Esc) {
       switch (OptionNr) {
-        case  0: ShowOLED("[Voice volume]", 0,4,1); PlaySound(SetVolumeMP3,8); break;
-        case  1: ShowOLED("[Minimal sensor]", 0,4,1); PlaySound(SetMinimalSensorValueMP3,8); break; 
-        case  2: ShowOLED("[Maximal sensor]", 0,4,1); PlaySound(SetMaximalSensorValueMP3,8); break;
-        case  3: ShowOLED("[Sensor threshold]", 0,4,1); PlaySound(SetSensorThresholdValueMP3,8); break;  
-        case  4: ShowOLED("[Sound curve]", 0,4,1); PlaySound(SetSoundCurveValueMP3,8); break;
-        case  5: ShowOLED("[Pitch reverse]", 0,4,1); PlaySound(SetPitchReverseMP3,8); break;
-        case  6: ShowOLED("[Always sound]", 0,4,1); PlaySound(SetAlwaysSoundMP3,8); break;    
-        case  7: ShowOLED("[Lowest pitch]", 0,4,1); PlaySound(SetLowestPitchMP3,8); break;
-        case  8: ShowOLED("[Higest pitch]", 0,4,1); PlaySound(SetHigestPitchMP3,8); break;
-        case  9: ShowOLED("[Auto adj. window]", 0,4,1); PlaySound(SetAutoAdjustWindowMP3,8); break;
-        case 10: ShowOLED("[Get ready time]", 0,4,1); PlaySound(SetTimeToGetReadyMP3,8); break;
-        case 11: ShowOLED("[Average]", 0,4,1); PlaySound(SetSensorAverageFilterMP3,8); break;
-        case 12: ShowOLED("[Sample speed]", 0,4,1); PlaySound(SetSampleSpeedMP3,8); break;
-        case 13: ShowOLED("[Pitch step]", 0,4,1); PlaySound(SetPitchStepMP3,8); break;
-        case 14: ShowOLED("[Factory settings]", 0,4,1); PlaySound(RestoreFactorySettingsMP3,8); break;                
+          case  0: ShowOLED("[Voice volume]", 0,4,1); PlaySound(SetVolumeMP3,8); break;
+          case  1: ShowOLED("[Minimal sensor]", 0,4,1); PlaySound(SetMinimalSensorValueMP3,8); break; 
+          case  2: ShowOLED("[Maximal sensor]", 0,4,1); PlaySound(SetMaximalSensorValueMP3,8); break;
+          case  3: ShowOLED("[Sensor threshold]", 0,4,1); PlaySound(SetSensorThresholdValueMP3,8); break;  
+          case  4: ShowOLED("[Sound curve]", 0,4,1); PlaySound(SetSoundCurveValueMP3,8); break;
+          case  5: ShowOLED("[Pitch reverse]", 0,4,1); PlaySound(SetPitchReverseMP3,8); break;
+          case  6: ShowOLED("[Always sound]", 0,4,1); PlaySound(SetAlwaysSoundMP3,8); break;    
+          case  7: ShowOLED("[Lowest pitch]", 0,4,1); PlaySound(SetLowestPitchMP3,8); break;
+          case  8: ShowOLED("[Higest pitch]", 0,4,1); PlaySound(SetHigestPitchMP3,8); break;
+          case  9: ShowOLED("[Auto adj. window]", 0,4,1); PlaySound(SetAutoAdjustWindowMP3,8); break;
+          case 10: ShowOLED("[Get ready time]", 0,4,1); PlaySound(SetTimeToGetReadyMP3,8); break;
+          case 11: ShowOLED("[Average]", 0,4,1); PlaySound(SetSensorAverageFilterMP3,8); break;
+          case 12: ShowOLED("[Sample speed]", 0,4,1); PlaySound(SetSampleSpeedMP3,8); break;
+          case 13: ShowOLED("[Pitch step]", 0,4,1); PlaySound(SetPitchStepMP3,8); break;
+          case 14: ShowOLED("[Factory settings]", 0,4,1); PlaySound(RestoreFactorySettingsMP3,8); break;                
       } 
-      //Serial.println("Option Nr: "+String(OptionNr)); 
       if (KeyVal() == Up)       if (OptionNr < 14) OptionNr+= 1;
       if (KeyVal() == Down)     if (OptionNr >  0) OptionNr-= 1;
       if (KeyVal() == Select)   Esc= true; 
       if (KeyVal() == Right)    PlayHelp(OptionNr);  
       if (KeyVal() == Left)     return;    
-    }
+  }
+  return OptionNr;
+}
+
+void Menu() {
+  ClearOLED();
+  ShowOLED("Settings menu", 0,0,2);
+  ShowOLED("Please wait...", 0,4,1);
+  PlayTone(0,0);
+  byte OptionSelect= MainMenuSelection();
     ShowOLED("Please wait...", 0,4,1);
     PlaySound(UseArrowKeysMP3,6);
-    switch(OptionNr) {
+    switch(OptionSelect) {
       case 0: Esc= false;
               while (!Esc) {
                  ShowOLED("Volume: "+(String)MP3Volume, 0,4,1);
@@ -907,7 +910,6 @@ void Menu() {
               }
               break;                        
     }
- }// master loop
     ShowOLED("Leaving menu", 0,4,1);
     PlayTone(0,0);  
     PlaySound(ExitOptionsMenuMP3,4);
