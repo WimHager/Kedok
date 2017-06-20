@@ -38,8 +38,8 @@ To Do:
  Start Batt check funtction
  add compile date maybe in eeprom as serial number Serial.println( "Compiled: " __DATE__ ", " __TIME__ ", " __VERSION__);
  if sensor read is < 50 try to switch off. Probably headset connected to the unit.
- Start with back in the menu, not just leave it.
-
+ Fonts naming
+ 
  Battery level check?
  Start to add a i2c ADS1015 12-Bit ADC - 4 Channel 
  Reset all if version updated
@@ -348,7 +348,7 @@ void WriteConfig() {
   };  
   EEPROM.put(1, CurSettings);
   ShowOLED("Saving config..", 0,4,1);
-  PlaySound(DataSettingsSavedMP3,3);
+  PlaySound(DataSettingsSavedMP3,3,0);
 }
 
 void ReadWriteDate(byte Write, byte Install) {
@@ -374,7 +374,7 @@ void ReadConfig() {
   SampleSpeed= CurSettings.SampleSpeed;
   PitchStep= CurSettings.PitchStep;
   ShowOLED("Reading config..", 0,4,1);
-  PlaySound(ReadConfigMP3,4);
+  PlaySound(ReadConfigMP3,4,0);
 }
 
 long ReadVcc() {
@@ -459,7 +459,7 @@ void LowReadWarning() {
   Beep(3,300);
   ClearOLED(); 
   ShowOLED("Lower settings", 0,4,1);
-  PlaySound(LowerMinimalSettingMP3,3);
+  PlaySound(LowerMinimalSettingMP3,3,0);
   ClearOLED();
   UpdateDisplay();
 }  
@@ -482,8 +482,8 @@ boolean InRange() {
 void MoveSensorWindow(int Val) {
   MinValue= MinValue + Val;
   MaxValue= MaxValue + Val;
-     if (Val < 0) PlaySound(SensorReducedMP3,3);
-     else  PlaySound(SensorIncreasedMP3,3);
+     if (Val < 0) PlaySound(SensorReducedMP3,3,0);
+     else  PlaySound(SensorIncreasedMP3,3,0);
   ClearOLED();
   WriteConfig();
   DisplaySensorReadings= false;
@@ -504,8 +504,8 @@ void AutoAdjust() {
 
   ClearOLED();
   ShowOLED("Prepare for aiming..", 0,4,1);
-  PlaySound(AutoAdjustStartedMP3,4);
-  PlaySound(PrepareWeaponForAimingMP3,4);
+  PlaySound(AutoAdjustStartedMP3,4,0);
+  PlaySound(PrepareWeaponForAimingMP3,4,0);
  
   while (TimeOutCounter < (GetReadyTime*90)) {
      Reading= ReadValue(0);
@@ -519,7 +519,7 @@ void AutoAdjust() {
   delay(300);
 
   ShowOLED("Start to aim now!", 0,4,1);
-  PlaySound(StartToAimNowMP3,5);
+  PlaySound(StartToAimNowMP3,5,0);
   TimeOutCounter= 0;
   while (ReadKey() == None) {
     Reading= ReadValue(0);
@@ -541,17 +541,17 @@ void AutoAdjust() {
     delay(3000);
   }else{
     ShowOLED("Warning level to high!", 0,4,1);
-    PlaySound(CalibrationLevelToHighMP3,10);
+    PlaySound(CalibrationLevelToHighMP3,10,0);
     PlayNumber(LowestReading,1);
   }  
 
    ShowOLED("Calibrated at: "+(String)MinValue, 0,4,1);
-   PlaySound(CalibratedAtMP3,3);
+   PlaySound(CalibratedAtMP3,3,0);
    PlayNumber(MinValue, 0);
    ShowOLED("Ajusting finished", 0,4,1);
-   PlaySound(AutoAdjustFinishedMP3,4);
+   PlaySound(AutoAdjustFinishedMP3,4,0);
    ShowOLED("Enjoy shooting!", 0,4,1);
-   PlaySound(HaveFunShootingMP3,4);
+   PlaySound(HaveFunShootingMP3,4,0);
    DisplaySensorReadings= false;
    UpdateDisplay();
 } 
@@ -646,36 +646,38 @@ void SetVolume(word Vol) {
   SendMP3Command(CMD_SET_VOLUME, 0X0000+Vol);
 } 
 
-void PlaySound(word Index, word Time) {
+void PlaySound(word Index, word Time, byte ScrnMsg) {
+  if (ScrnMsg) ShowOLED("Please wait...", 0,4,1);
   SendMP3Command(CMD_PLAY_FOLDER_FILE, MP3Language+Index);
   DelaySecIntr(Time,true);
 }
 
 void PlayNumber(word Nr, byte EnableTheValueText) {
-  if (EnableTheValueText) PlaySound(TheValueIsMP3,2);
-  if (Nr > 999) PlaySound(( Nr/1000),1);
-  if (Nr > 99)  PlaySound(((Nr/100)%10),1);
-  if (Nr > 9)   PlaySound(((Nr/10)%10),1);
-  PlaySound((Nr%10),3);
+  if (EnableTheValueText) PlaySound(TheValueIsMP3,2,0);
+  if (Nr > 999) PlaySound(( Nr/1000),1,0);
+  if (Nr > 99)  PlaySound(((Nr/100)%10),1,0);
+  if (Nr > 9)   PlaySound(((Nr/10)%10),1,0);
+  PlaySound((Nr%10),3,0);
 }
 
 void PlayHelp(byte Option) {
+  ShowOLED("Help playing..",0,4,1);
   switch(Option) {
-    case  0: PlaySound(HelpSetVolumeMP3,8); break;
-    case  1: PlaySound(HelpSetMinimalSensorValueMP3,13); break;
-    case  2: PlaySound(HelpSetMaximalSensorValueMP3,13); break; 
-    case  3: PlaySound(HelpSetSensorThresholdValueMP3,10); break;
-    case  4: PlaySound(HelpSetSoundCurveValueMP3,11); break;
-    case  5: PlaySound(HelpSetPitchReverseMP3,9); break;
-    case  6: PlaySound(HelpSetAlwaysSoundMP3,8); break;
-    case  7: PlaySound(HelpSetLowestPitchMP3,7); break;  
-    case  8: PlaySound(HelpSetHigestPitchMP3,7); break;
-    case  9: PlaySound(HelpSetAutoAdjustWindowMP3,11); break;
-    case 10: PlaySound(HelpSetTimeToGetReadyMP3,10); break;
-    case 11: PlaySound(HelpSetSensorAverageFilterMP3,14); break;
-    case 12: PlaySound(HelpSetSampleSpeedMP3 ,8); break;
-    case 13: PlaySound(HelpSetPitchStepMP3,12); break;
-    case 14: PlaySound(HelpRestoreFactorySettingsMP3,10); break;
+    case  0: PlaySound(HelpSetVolumeMP3,8,0); break;
+    case  1: PlaySound(HelpSetMinimalSensorValueMP3,13,0); break;
+    case  2: PlaySound(HelpSetMaximalSensorValueMP3,13,0); break; 
+    case  3: PlaySound(HelpSetSensorThresholdValueMP3,10,0); break;
+    case  4: PlaySound(HelpSetSoundCurveValueMP3,11,0); break;
+    case  5: PlaySound(HelpSetPitchReverseMP3,9,0); break;
+    case  6: PlaySound(HelpSetAlwaysSoundMP3,8,0); break;
+    case  7: PlaySound(HelpSetLowestPitchMP3,7,0); break;  
+    case  8: PlaySound(HelpSetHigestPitchMP3,7,0); break;
+    case  9: PlaySound(HelpSetAutoAdjustWindowMP3,11,0); break;
+    case 10: PlaySound(HelpSetTimeToGetReadyMP3,10,0); break;
+    case 11: PlaySound(HelpSetSensorAverageFilterMP3,14,0); break;
+    case 12: PlaySound(HelpSetSampleSpeedMP3,8,0); break;
+    case 13: PlaySound(HelpSetPitchStepMP3,12,0); break;
+    case 14: PlaySound(HelpRestoreFactorySettingsMP3,10,0); break;
   }  
 }
 
@@ -688,51 +690,51 @@ byte KeyVal() {
   return None; //No key
 }
 
-void Menu() {
-  ClearOLED();
-  ShowOLED("Settings menu", 0,0,2);
-  ShowOLED("Please wait...", 0,4,1);
-  PlayTone(0,0);
-  byte OptionNr= 0;
-  PlaySound(SettingsMenuMP3,3);
-  PlaySound(SelectTheOptionMP3,5);
-  while (false==false) {
-  boolean Esc= false;
-  while(!Esc) {
+byte MainMenuSelection() {
+    byte OptionNr= 0;
+    ClearOLED();
+    ShowOLED("Settings menu", 0,0,2);
+    PlaySound(SettingsMenuMP3,3,1);
+    PlaySound(SelectTheOptionMP3,5,0);
+    byte Esc= false;
+    while(!Esc) {
       switch (OptionNr) {
-        case  0: ShowOLED("[Voice volume]", 0,4,1); PlaySound(SetVolumeMP3,8); break;
-        case  1: ShowOLED("[Minimal sensor]", 0,4,1); PlaySound(SetMinimalSensorValueMP3,8); break; 
-        case  2: ShowOLED("[Maximal sensor]", 0,4,1); PlaySound(SetMaximalSensorValueMP3,8); break;
-        case  3: ShowOLED("[Sensor threshold]", 0,4,1); PlaySound(SetSensorThresholdValueMP3,8); break;  
-        case  4: ShowOLED("[Sound curve]", 0,4,1); PlaySound(SetSoundCurveValueMP3,8); break;
-        case  5: ShowOLED("[Pitch reverse]", 0,4,1); PlaySound(SetPitchReverseMP3,8); break;
-        case  6: ShowOLED("[Always sound]", 0,4,1); PlaySound(SetAlwaysSoundMP3,8); break;    
-        case  7: ShowOLED("[Lowest pitch]", 0,4,1); PlaySound(SetLowestPitchMP3,8); break;
-        case  8: ShowOLED("[Higest pitch]", 0,4,1); PlaySound(SetHigestPitchMP3,8); break;
-        case  9: ShowOLED("[Auto adj. window]", 0,4,1); PlaySound(SetAutoAdjustWindowMP3,8); break;
-        case 10: ShowOLED("[Get ready time]", 0,4,1); PlaySound(SetTimeToGetReadyMP3,8); break;
-        case 11: ShowOLED("[Average]", 0,4,1); PlaySound(SetSensorAverageFilterMP3,8); break;
-        case 12: ShowOLED("[Sample speed]", 0,4,1); PlaySound(SetSampleSpeedMP3,8); break;
-        case 13: ShowOLED("[Pitch step]", 0,4,1); PlaySound(SetPitchStepMP3,8); break;
-        case 14: ShowOLED("[Factory settings]", 0,4,1); PlaySound(RestoreFactorySettingsMP3,8); break;                
-      } 
-      //Serial.println("Option Nr: "+String(OptionNr)); 
-      if (KeyVal() == Up)       if (OptionNr < 14) OptionNr+= 1;
-      if (KeyVal() == Down)     if (OptionNr >  0) OptionNr-= 1;
-      if (KeyVal() == Select)   Esc= true; 
-      if (KeyVal() == Right)    PlayHelp(OptionNr);  
-      if (KeyVal() == Left)     return;    
-    }
-    ShowOLED("Please wait...", 0,4,1);
-    PlaySound(UseArrowKeysMP3,6);
-    switch(OptionNr) {
+          case  0: ShowOLED("[Voice volume]", 0,4,1); PlaySound(SetVolumeMP3,8,0); break;
+          case  1: ShowOLED("[Minimal sensor]", 0,4,1); PlaySound(SetMinimalSensorValueMP3,8,0); break; 
+          case  2: ShowOLED("[Maximal sensor]", 0,4,1); PlaySound(SetMaximalSensorValueMP3,8,0); break;
+          case  3: ShowOLED("[Sensor threshold]", 0,4,1); PlaySound(SetSensorThresholdValueMP3,8,0); break;  
+          case  4: ShowOLED("[Sound curve]", 0,4,1); PlaySound(SetSoundCurveValueMP3,8,0); break;
+          case  5: ShowOLED("[Pitch reverse]", 0,4,1); PlaySound(SetPitchReverseMP3,8,0); break;
+          case  6: ShowOLED("[Always sound]", 0,4,1); PlaySound(SetAlwaysSoundMP3,8,0); break;    
+          case  7: ShowOLED("[Lowest pitch]", 0,4,1); PlaySound(SetLowestPitchMP3,8,0); break;
+          case  8: ShowOLED("[Higest pitch]", 0,4,1); PlaySound(SetHigestPitchMP3,8,0); break;
+          case  9: ShowOLED("[Auto adj. window]", 0,4,1); PlaySound(SetAutoAdjustWindowMP3,8,0); break;
+          case 10: ShowOLED("[Get ready time]", 0,4,1); PlaySound(SetTimeToGetReadyMP3,8,0); break;
+          case 11: ShowOLED("[Average]", 0,4,1); PlaySound(SetSensorAverageFilterMP3,8,0); break;
+          case 12: ShowOLED("[Sample speed]", 0,4,1); PlaySound(SetSampleSpeedMP3,8,0); break;
+          case 13: ShowOLED("[Pitch step]", 0,4,1); PlaySound(SetPitchStepMP3,8,0); break;
+          case 14: ShowOLED("[Factory settings]", 0,4,1); PlaySound(RestoreFactorySettingsMP3,8,0); break;                
+     } 
+     if (KeyVal() == Up)       if (OptionNr < 14) OptionNr+= 1;
+     if (KeyVal() == Down)     if (OptionNr >  0) OptionNr-= 1;
+     if (KeyVal() == Select)   Esc= true; 
+     if (KeyVal() == Right)    PlayHelp(OptionNr);  
+     if (KeyVal() == Left)     return 255; 
+  }
+  return OptionNr;
+}
+
+void OptionsMenu(byte Option) {
+    byte Esc= false;
+    PlaySound(UseArrowKeysMP3,6,1);
+    switch(Option) {
       case 0: Esc= false;
               while (!Esc) {
                  ShowOLED("Volume: "+(String)MP3Volume, 0,4,1);
                  PlayNumber(MP3Volume, 1);
                  if (KeyVal() == Up)       if (MP3Volume < 30) MP3Volume+= 1;
                  if (KeyVal() == Down)     if (MP3Volume >  5) MP3Volume-= 1;
-                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
+                 if (KeyVal() == Right)    PlayHelp(Option); 
                  if (KeyVal() == Left)     Esc= true;
                  if (KeyVal() == Select)   WriteConfig();
                  SetVolume(MP3Volume);
@@ -744,7 +746,7 @@ void Menu() {
                  PlayNumber(MinValue, 1);
                  if (KeyVal() == Up)       if (MinValue < (MaxValue-20)) MinValue+= 5;
                  if (KeyVal() == Down)     if (MinValue > 10) MinValue-= 5;
-                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
+                 if (KeyVal() == Right)    PlayHelp(Option); 
                  if (KeyVal() == Left)     Esc= true;
                  if (KeyVal() == Select)   WriteConfig();
               }
@@ -755,7 +757,7 @@ void Menu() {
                  PlayNumber(MaxValue, 1);
                  if (KeyVal() == Up)       if (MaxValue < 990) MaxValue+= 5;
                  if (KeyVal() == Down)     if (MaxValue > (MinValue+20)) MaxValue-= 5;
-                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
+                 if (KeyVal() == Right)    PlayHelp(Option); 
                  if (KeyVal() == Left)     Esc= true;
                  if (KeyVal() == Select)   WriteConfig();
               }
@@ -766,7 +768,7 @@ void Menu() {
                  PlayNumber(ThresholdWindow, 1);
                  if (KeyVal() == Up)       if (ThresholdWindow < 190) ThresholdWindow+= 10;
                  if (KeyVal() == Down)     if (ThresholdWindow > 10)  ThresholdWindow-= 10;
-                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
+                 if (KeyVal() == Right)    PlayHelp(Option); 
                  if (KeyVal() == Left)     Esc= true;
                  if (KeyVal() == Select)   WriteConfig();
               }
@@ -777,27 +779,29 @@ void Menu() {
                  PlayNumber(Curve, 1);
                  if (KeyVal() == Up)       if (Curve < 5) Curve++;
                  if (KeyVal() == Down)     if (Curve > 0) Curve--;
-                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
+                 if (KeyVal() == Right)    PlayHelp(Option); 
                  if (KeyVal() == Left)     Esc= true;
                  if (KeyVal() == Select)   WriteConfig();
               }
               break;  
       case 5: Esc= false;
               while (!Esc) {
-                 if (PitchRev) PlaySound(PitchReverseEnabledMP3,3); else PlaySound(PitchReverseDisabledMP3,3); 
+                 ShowOLED("Pitch Reverse: "+(String)YesNoArr[PitchRev], 0,4,1);
+                 if (PitchRev) PlaySound(PitchReverseEnabledMP3,3,0); else PlaySound(PitchReverseDisabledMP3,3,0); 
                  if (KeyVal() == Up)       if (PitchRev < 1) PitchRev++;
                  if (KeyVal() == Down)     if (PitchRev > 0) PitchRev--;
-                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
+                 if (KeyVal() == Right)    PlayHelp(Option); 
                  if (KeyVal() == Left)     Esc= true;
                  if (KeyVal() == Select)   WriteConfig();
               }
               break;
       case 6: Esc= false;
               while (!Esc) {
-                 if (AlwaysSound) PlaySound(AlwaysSoundEnabledMP3,3); else PlaySound(AlwaysSoundDisabledMP3,3); 
+                 ShowOLED("Always Sound: "+(String)YesNoArr[AlwaysSound], 0,4,1);
+                 if (AlwaysSound) PlaySound(AlwaysSoundEnabledMP3,3,0); else PlaySound(AlwaysSoundDisabledMP3,3,0); 
                  if (KeyVal() == Up)       if (AlwaysSound < 1) AlwaysSound++;
                  if (KeyVal() == Down)     if (AlwaysSound > 0) AlwaysSound--;
-                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
+                 if (KeyVal() == Right)    PlayHelp(Option); 
                  if (KeyVal() == Left)     Esc= true;
                  if (KeyVal() == Select)   WriteConfig();
               }
@@ -809,11 +813,11 @@ void Menu() {
                  delay(300);
                  if (KeyVal() == Down)     if (LowTone > 50) LowTone-= 50;
                  if (KeyVal() == Up)       if (LowTone < (HighTone-100)) LowTone+= 50;
-                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
+                 if (KeyVal() == Right)    PlayHelp(Option); 
                  if (KeyVal() == Left)     Esc= true;
                  if (KeyVal() == Select)   WriteConfig();
               }
-              PlaySound(LowPitchSetAtMP3,4); PlayNumber(LowTone, 0); PlaySound(HertzMP3,2);
+              PlaySound(LowPitchSetAtMP3,4,0); PlayNumber(LowTone, 0); PlaySound(HertzMP3,2,0);
               break;    
       case 8: Esc= false;
               while (!Esc) {
@@ -822,19 +826,19 @@ void Menu() {
                  delay(300);
                  if (KeyVal() == Down)     if (HighTone > (LowTone+100)) HighTone-= 50;
                  if (KeyVal() == Up)       if (HighTone < 9000) HighTone+= 50;
-                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
+                 if (KeyVal() == Right)    PlayHelp(Option); 
                  if (KeyVal() == Left)     Esc= true;
                  if (KeyVal() == Select)   WriteConfig();
               }
-              PlaySound(HighPitchSetAtMP3,4); PlayNumber(HighTone, 0); PlaySound(HertzMP3,2);
+              PlaySound(HighPitchSetAtMP3,4,0); PlayNumber(HighTone, 0); PlaySound(HertzMP3,2,0);
               break;  
       case 9: Esc= false;
               while (!Esc) {
-                 ShowOLED("Auto adj. window: "+(String)AutoAdjustWindow, 0,4,1);
+                 ShowOLED("Auto window: "+(String)AutoAdjustWindow, 0,4,1);
                  PlayNumber(AutoAdjustWindow, 1);
                  if (KeyVal() == Down)     if (AutoAdjustWindow > 50)   AutoAdjustWindow-= 10;
                  if (KeyVal() == Up)       if (AutoAdjustWindow < 300)  AutoAdjustWindow+= 10;
-                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
+                 if (KeyVal() == Right)    PlayHelp(Option); 
                  if (KeyVal() == Left)     Esc= true;
                  if (KeyVal() == Select)   WriteConfig();
               }
@@ -845,7 +849,7 @@ void Menu() {
                  PlayNumber(GetReadyTime, 1);
                  if (KeyVal() == Down)     if (GetReadyTime > 2)       GetReadyTime-= 1;
                  if (KeyVal() == Up)       if (GetReadyTime < 20)      GetReadyTime+= 1;
-                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
+                 if (KeyVal() == Right)    PlayHelp(Option); 
                  if (KeyVal() == Left)     Esc= true;
                  if (KeyVal() == Select)   WriteConfig();
               }
@@ -853,13 +857,13 @@ void Menu() {
      case 11: Esc= false;
               while (!Esc) {
                  ShowOLED("Averaging: "+(String)AvgModes[AverageValue], 0,4,1);
-                 if (AverageValue == 0)    PlaySound(DisableMP3,4); 
-                 if (AverageValue == 1)    PlaySound(LowMP3,4);
-                 if (AverageValue == 2)    PlaySound(MediumMP3,4); 
-                 if (AverageValue == 3)    PlaySound(HighMP3,4);
+                 if (AverageValue == 0)    PlaySound(DisableMP3,4,0); 
+                 if (AverageValue == 1)    PlaySound(LowMP3,4,0);
+                 if (AverageValue == 2)    PlaySound(MediumMP3,4,0); 
+                 if (AverageValue == 3)    PlaySound(HighMP3,4,0);
                  if (KeyVal() == Down)     if (AverageValue > 0)       AverageValue-= 1;
                  if (KeyVal() == Up)       if (AverageValue < 3)       AverageValue+= 1;
-                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
+                 if (KeyVal() == Right)    PlayHelp(Option); 
                  if (KeyVal() == Left)     Esc= true;
                  if (KeyVal() == Select)   WriteConfig();
               }
@@ -867,13 +871,13 @@ void Menu() {
      case 12: Esc= false;
               while (!Esc) {
                  ShowOLED("Speed: "+(String)SampleModes[SampleSpeed], 0,4,1);
-                 if (SampleSpeed == 0)     PlaySound(FastMP3,4);
-                 if (SampleSpeed == 1)     PlaySound(MediumMP3,4); 
-                 if (SampleSpeed == 2)     PlaySound(SlowMP3,4);
-                 if (SampleSpeed == 3)     PlaySound(SlowestMP3,4);
+                 if (SampleSpeed == 0)     PlaySound(FastMP3,4,0);
+                 if (SampleSpeed == 1)     PlaySound(MediumMP3,4,0); 
+                 if (SampleSpeed == 2)     PlaySound(SlowMP3,4,0);
+                 if (SampleSpeed == 3)     PlaySound(SlowestMP3,4,0);
                  if (KeyVal() == Down)     if (SampleSpeed > 0)       SampleSpeed-= 1;
                  if (KeyVal() == Up)       if (SampleSpeed < 3)       SampleSpeed+= 1;
-                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
+                 if (KeyVal() == Right)    PlayHelp(Option); 
                  if (KeyVal() == Left)     Esc= true;
                  if (KeyVal() == Select)   WriteConfig();
               }
@@ -881,10 +885,10 @@ void Menu() {
      case 13: Esc= false;
               while (!Esc) {
                  ShowOLED("Pitch step: "+(String)YesNoArr[PitchStep], 0,4,1);
-                 if (PitchStep) PlaySound(PitchStepEnabledMP3,4); else PlaySound(PitchStepDisabledMP3,4); 
+                 if (PitchStep) PlaySound(PitchStepEnabledMP3,4,0); else PlaySound(PitchStepDisabledMP3,4,0); 
                  if (KeyVal() == Up)       if (PitchStep < 1) PitchStep++;
                  if (KeyVal() == Down)     if (PitchStep > 0) PitchStep--;
-                 if (KeyVal() == Right)    PlayHelp(OptionNr); 
+                 if (KeyVal() == Right)    PlayHelp(Option); 
                  if (KeyVal() == Left)     Esc= true;
                  if (KeyVal() == Select)   WriteConfig();
               }
@@ -893,26 +897,34 @@ void Menu() {
               boolean SetToDefaults= false; 
               while (!Esc) {
                  ShowOLED("Factory reset: "+(String)YesNoArr[SetToDefaults], 0,4,1);
-                 if (SetToDefaults) PlaySound(RestoreFactoryDefaultsEnabledMP3,4); else PlaySound(RestoreFactoryDefaultsDisabledMP3,4); 
+                 if (SetToDefaults) PlaySound(RestoreFactoryDefaultsEnabledMP3,4,0); else PlaySound(RestoreFactoryDefaultsDisabledMP3,4,0); 
                  if (KeyVal() == Up)        if (SetToDefaults < 1) SetToDefaults= true;
                  if (KeyVal() == Down)      if (SetToDefaults > 0) SetToDefaults= false;
-                 if (KeyVal() == Right)     PlayHelp(OptionNr); 
+                 if (KeyVal() == Right)     PlayHelp(Option); 
                  if (KeyVal() == Left)      Esc= true;
                  if (KeyVal() == Select)    if (SetToDefaults) {
                                                ShowOLED("Reset to defaults.", 0,4,1);
-                                               PlaySound(AllSettingsResetToDefaultsMP3,4);
+                                               PlaySound(AllSettingsResetToDefaultsMP3,4,0);
                                                EEPROM.write(0,0); 
                                                Reset(); 
                                             }
               }
               break;                        
-    }
- }// master loop
-    ShowOLED("Leaving menu", 0,4,1);
-    PlayTone(0,0);  
-    PlaySound(ExitOptionsMenuMP3,4);
-    DisplaySensorReadings= false;
-    UpdateDisplay();
+    }  
+}
+  
+void Menu() {
+  byte OptionSelect;  //maybe static???
+  PlayTone(0,0);
+  while(OptionSelect != 255) {
+    OptionSelect= MainMenuSelection();
+    if (OptionSelect != 255) OptionsMenu(OptionSelect); //dirty !!!!!
+    PlayTone(0,0);
+  }
+  ShowOLED("Leaving menu", 0,4,1);
+  PlaySound(ExitOptionsMenuMP3,4,0);
+  DisplaySensorReadings= false;
+  UpdateDisplay();
 }
 
 
@@ -923,10 +935,8 @@ void setup() {
   oled.begin(&Adafruit128x64, I2C_ADDRESS);
   InitKeyPad();
   ClearOLED();
-  ShowOLED((String)ReadVcc(),43,3,5);
-  delay(3000);
-  ClearOLED();
-  ShowOLED(__DATE__,0,4,2);
+  ShowOLED("Batt: " +(String)ReadVcc()+"mV",0,6,3); //make init screen must be better!!!
+  ShowOLED("Build: "+(String)__DATE__,0,7,3);
   delay(3000);
   ClearOLED();
   
@@ -940,9 +950,9 @@ void setup() {
   SendMP3Command(CMD_SEL_DEV, DEV_TF);//select the TF card  
   delay(500);
   SetVolume(MP3Volume);
-  PlaySound(WelcomeMP3,4);
+  PlaySound(WelcomeMP3,4,0);
   DisplaySensorReadings= false;
-  for (byte X=0; X<255; X++) ReadValue(AverageValue); //clear EMA filter
+  for (byte X=0; X<255; X++) ReadValue(AverageValue); //clear EMA filter needed???
   UpdateDisplay();
 }
 
