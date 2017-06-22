@@ -278,7 +278,6 @@ word    LowTone=                  100;
 word    HighTone=                1750;
 
 byte    Curve=                      0;
-//byte    WaveShape=                  0; //can be removed
 byte    PitchRev=               false;
 byte    AlwaysSound=            false; 
   
@@ -845,7 +844,7 @@ void OptionsMenu(byte Option) {
               break;
      case 10: Esc= false;
               while (!Esc) {
-                 ShowOLED("Ready timer: "+(String)GetReadyTime+" s.", 0,4,1);
+                 ShowOLED("Timer: "+(String)GetReadyTime+" sec.", 0,4,1);
                  PlayNumber(GetReadyTime, 1);
                  if (KeyVal() == Down)     if (GetReadyTime > 2)       GetReadyTime-= 1;
                  if (KeyVal() == Up)       if (GetReadyTime < 20)      GetReadyTime+= 1;
@@ -919,7 +918,7 @@ void Menu() {
   while(OptionSelect != 255) {
     OptionSelect= MainMenuSelection();
     if (OptionSelect != 255) OptionsMenu(OptionSelect); //dirty !!!!!
-    PlayTone(0,0);
+    PlayTone(0,0); //needed?
   }
   ShowOLED("Leaving menu", 0,4,1);
   PlaySound(ExitOptionsMenuMP3,4,0);
@@ -937,21 +936,16 @@ void setup() {
   ClearOLED();
   ShowOLED("Batt: " +(String)ReadVcc()+"mV",0,6,3); //make init screen must be better!!!
   ShowOLED("Build: "+(String)__DATE__,0,7,3);
-  delay(3000);
-  ClearOLED();
-  
-  //Serial.begin(9600);
-  if (EEPROM.read(0)==1) ReadConfig();
+  if (EEPROM.read(0)==1) ReadConfig(); //Check if eeprom is empty (new)
   else WriteConfig();
   LowestReading= MaxValue;
   WarningReading= MinValue;
   mySerial.begin(9600);
-  delay(500);//Wait chip initialization is complete
+  delay(500);//Wait audio chip initialization is complete
   SendMP3Command(CMD_SEL_DEV, DEV_TF);//select the TF card  
   delay(500);
   SetVolume(MP3Volume);
   PlaySound(WelcomeMP3,4,0);
-  DisplaySensorReadings= false;
   for (byte X=0; X<255; X++) ReadValue(AverageValue); //clear EMA filter needed???
   UpdateDisplay();
 }
