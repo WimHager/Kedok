@@ -430,16 +430,6 @@ word EmaFilter(word Inp, float Alpha) { //Alpha in range of 9..1
   return EmaVal;
 }
 
-/*
-word ReadValue(word AvgVal) { 
-  if (!AverageValue) return analogRead(SensorPin); // For the sake of speed
-  unsigned long ValueSum= 0;
-  AvgVal= pow(AvgVal,4)+4; //Creates avg. steps of 5, 20, 85
-  for (long X=0; X<AverageValue; X++) ValueSum+= analogRead(SensorPin);
-  return ValueSum/AverageValue;
-}
-*/
-
 word ReadValue(word AvgVal) { 
   if (!AverageValue) return analogRead(SensorPin); // For the sake of speed
   return EmaFilter(analogRead(SensorPin),11-(AvgVal*3)); //Creates 1=8 Low,2=5 Medium, 3=2 High
@@ -477,12 +467,6 @@ String WordToStr(word Inp, byte Size) {
   return Str; 
 }  
 
-/*
-boolean InRange() {
-  return ((Reading > MinValue) && (Reading < MaxValue));
-}
-*/
-
 void MoveSensorWindow(int Val) {
   MinValue= MinValue + Val;
   MaxValue= MaxValue + Val;
@@ -494,12 +478,6 @@ void MoveSensorWindow(int Val) {
   UpdateDisplay();
   //delay(500);
 }  
-
-/*
-void EEPromClear() {
-  for (int I = 0; I < 999; I++) EEPROM.write(I, 0); //reserve 1000 to 1023 for serial number
-}
-*/
 
 void AutoAdjust() {
   word Reading;
@@ -747,9 +725,8 @@ void OptionsMenu(byte Option) {
                     if (KeyVal() == Up)       if (LowTone < (HighTone-100)) LowTone+= 50;
                     if (KeyVal() == Right)    PlayHelp(Option); 
                     if (KeyVal() == Left)     Esc= true;
-                    if (KeyVal() == Select)   WriteConfig();
-                 }
-                 PlaySound(LowPitchSetAtMP3,4,0); PlayNumber(LowTone, 0); PlaySound(HertzMP3,2,0);
+                    if (KeyVal() == Select)   {WriteConfig(); PlaySound(LowPitchSetAtMP3,4,0); PlayNumber(LowTone, 0); PlaySound(HertzMP3,2,0);}
+                 }   
                  break;    
         case  2: Esc= false;
                  while (!Esc) {
@@ -760,9 +737,8 @@ void OptionsMenu(byte Option) {
                     if (KeyVal() == Up)       if (HighTone < 9000) HighTone+= 50;
                     if (KeyVal() == Right)    PlayHelp(Option); 
                     if (KeyVal() == Left)     Esc= true;
-                    if (KeyVal() == Select)   WriteConfig();
+                    if (KeyVal() == Select)   {WriteConfig(); PlaySound(HighPitchSetAtMP3,4,0); PlayNumber(HighTone, 0); PlaySound(HertzMP3,2,0);}
                  }
-                 PlaySound(HighPitchSetAtMP3,4,0); PlayNumber(HighTone, 0); PlaySound(HertzMP3,2,0);
                  break; 
        case   3: Esc= false;
                  while (!Esc) {
@@ -801,7 +777,7 @@ void OptionsMenu(byte Option) {
                       if (KeyVal() == Right)    PlayHelp(Option); 
                       if (KeyVal() == Left)     Esc= true;
                       if (KeyVal() == Select)   WriteConfig();
-                    }
+                 }
                  break;                  
        case   6: Esc= false;
                  while (!Esc) {
@@ -812,8 +788,8 @@ void OptionsMenu(byte Option) {
                     if (KeyVal() == Right)    PlayHelp(Option); 
                     if (KeyVal() == Left)     Esc= true;
                     if (KeyVal() == Select)   WriteConfig();
-                  }
-                  break; 
+                 }
+                 break; 
        case   7: Esc= false;
                  while (!Esc) {
                      ShowOLED("Auto window: "+(String)AutoAdjustWindow, 0,4,1);
@@ -902,8 +878,7 @@ void OptionsMenu(byte Option) {
                     if (KeyVal() == Select)   WriteConfig();
                 }
                 break;
-      
-       case 15: {Esc= false;
+      case 15: { Esc= false;
                  boolean SetToDefaults= false; 
                  while (!Esc) {
                     ShowOLED("Factory reset: "+(String)YesNoArr[SetToDefaults], 0,4,1);
