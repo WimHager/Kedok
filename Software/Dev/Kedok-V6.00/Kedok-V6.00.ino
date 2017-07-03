@@ -35,18 +35,18 @@ word    MP3Language=       0X0200; //0X0100 English 0X0200 Dutch
 
 To Do:
 
- Start Batt check funtction
+ Batt check funtction
  add compile date maybe in eeprom as serial number Serial.println( "Compiled: " __DATE__ ", " __TIME__ ", " __VERSION__);
  if sensor read is < 50 try to switch off. Probably headset connected to the unit.
  Fonts naming
- //Bug if you go back from a menu option and not save it, it shows last setting unitl you enter the menu again
+ Test with diode and capacitor
+ Language selection in menu
+ Pitch reverse needed?
+ Better English voice
   
- Battery level check?
  Start to add a i2c ADS1015 12-Bit ADC - 4 Channel 
  Reset all if version updated
  Better Auto adjust
- Full test of Curve parameter
- Add an option to escape the menu without saving
  Add option to save users presets
  Change delay's in speech, some are utterly slow alo improve saying values (remove "value is" in some cases) 
  Beginners mode, wide window
@@ -295,6 +295,7 @@ byte    AverageValue=               1; //Read 0 values to average, Default Minim
 byte    SampleSpeed=                0; //Loop delay 0,5,10,20
 byte    PitchStep=                  0; //Disables or enables Pitch step feature
 byte    DisplaySensorReadings=      0; 
+word    CalibrationTime=         1500; //Calibration timeout if there are no better readings readby the sensor (was 2000)
 
 struct SettingsObj {
   word MinValue;
@@ -432,7 +433,7 @@ word EmaFilter(word Inp, float Alpha) { //Alpha in range of 9..1
 
 word ReadValue(word AvgVal) { 
   if (!AverageValue) return analogRead(SensorPin); // For the sake of speed
-  return EmaFilter(analogRead(SensorPin),11-(AvgVal*3)); //Creates 1=8 Low,2=5 Medium, 3=2 High
+  return EmaFilter(analogRead(SensorPin),10-(AvgVal*3)); //Creates 1=8 Low,2=5 Medium, 3=2 High
 }
 
 void PlayTone(word Tone, word Duration) {
@@ -512,7 +513,7 @@ void AutoAdjust() {
       TimeOutCounter= 0;
     }  
     TimeOutCounter++;
-    if (TimeOutCounter > 2000) break;
+    if (TimeOutCounter > CalibrationTime) break;
     delay(10);
   }
   if (LowestReading < (1023-(AutoAdjustWindow+ThresholdWindow))) { //Calculate lowest value within AD range
@@ -520,7 +521,7 @@ void AutoAdjust() {
     MinValue= LowestReading-20;
     MaxValue= MinValue+AutoAdjustWindow;
     WriteConfig();
-    delay(3000);
+    delay(300);
   }else{
     ShowOLED("Warning level to high!", 0,4,1);
     PlaySound(CalibrationLevelToHighMP3,10,0);
