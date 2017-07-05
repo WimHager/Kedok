@@ -3,7 +3,7 @@ __asm volatile ("nop");
 #endif
 
 //====================================Compiler options=============================================================
-//#define DEBUG-SPEECH  //Give debug info over serial port.
+#define SENSOR-TEST   //Output sensor readings to serialport only
 
 const   char      Version[5]="6.00";
 const   char      Owner[16]= "DEMO";
@@ -43,6 +43,8 @@ To Do:
  Language selection in menu
  Pitch reverse needed?
  Better English voice
+ Had a bug with filter, not sure. was in maximal, gave lower minimal settings
+ Pre calculate average value and don't calculate every time
   
  Start to add a i2c ADS1015 12-Bit ADC - 4 Channel 
  Reset all if version updated
@@ -331,6 +333,35 @@ void Reset() {
   asm volatile ("  jmp 0");
 } 
 
+#ifdef SENSOR-TEST
+  #include "QuickStats.h"  
+  QuickStats stats;
+  float Readings[100];
+  int   NumReadings= 100;
+  
+  void SensorTest() {
+    ShowOLED("Test mode!!", 0,3,1);
+    delay(5000);
+    Serial.begin(9600);
+    while (!KeyVal()) {
+       for(int X= 0; X<NumReadings; X++) {
+         Readings[X]= ReadValue(0); //0 is no filter
+         delay(10); //One sec sample
+       }
+       ShowOLED("Average: "+(String)stats.average(Readings,NumReadings), 0,2,3);
+       ShowOLED("Minimum: "+(String)stats.minimum(Readings,NumReadings), 0,3,3);
+       ShowOLED("Maximum: "+(String)stats.maximum(Readings,NumReadings), 0,4,3);
+       ShowOLED("Std dev: "+(String)stats.stdev(Readings,NumReadings), 0,5,3);
+       ShowOLED("Std err: "+(String)stats.stderror(Readings,NumReadings), 0,6,3);
+       ShowOLED("Co Vari: "+(String)stats.CV(Readings,NumReadings), 0,7,3);
+       delay(5000);  //make key delay
+    }       
+    while (true) {
+      Serial.println((String)ReadValue(0));
+    }
+}
+#endif
+
 void WriteConfig() {
   EEPROM.write(0,1);
   SettingsObj CurSettings= {
@@ -433,7 +464,7 @@ word EmaFilter(word Inp, float Alpha) { //Alpha in range of 9..1
 
 word ReadValue(word AvgVal) { 
   if (!AverageValue) return analogRead(SensorPin); // For the sake of speed
-  return EmaFilter(analogRead(SensorPin),10-(AvgVal*3)); //Creates 1=8 Low,2=5 Medium, 3=2 High
+  return EmaFilter(analogRead(SensorPin),10-(AvgVal*3)); //Creates 1=7 Low,2=6 Medium, 3=1 Maximal //Change this, it can be pre calculated!!
 }
 
 void PlayTone(word Tone, word Duration) {
@@ -726,7 +757,7 @@ void OptionsMenu(byte Option) {
                     if (KeyVal() == Up)       if (LowTone < (HighTone-100)) LowTone+= 50;
                     if (KeyVal() == Right)    PlayHelp(Option); 
                     if (KeyVal() == Left)     Esc= true;
-                    if (KeyVal() == Select)   {WriteConfig(); PlaySound(LowPitchSetAtMP3,4,0); PlayNumber(LowTone, 0); PlaySound(HertzMP3,2,0);}
+                    if (KeyVal() == Select)   {WriteConfig(); PlaySound(LowPitchSetAtMP3,4,0); PlayNumber(LowTone, 0); PlaySound(HertzMP3,2,0); Esc= true;}
                  }   
                  break;    
         case  2: Esc= false;
@@ -738,7 +769,7 @@ void OptionsMenu(byte Option) {
                     if (KeyVal() == Up)       if (HighTone < 9000) HighTone+= 50;
                     if (KeyVal() == Right)    PlayHelp(Option); 
                     if (KeyVal() == Left)     Esc= true;
-                    if (KeyVal() == Select)   {WriteConfig(); PlaySound(HighPitchSetAtMP3,4,0); PlayNumber(HighTone, 0); PlaySound(HertzMP3,2,0);}
+                    if (KeyVal() == Select)   {WriteConfig(); PlaySound(HighPitchSetAtMP3,4,0); PlayNumber(HighTone, 0); PlaySound(HertzMP3,2,0); Esc= true;}
                  }
                  break; 
        case   3: Esc= false;
@@ -752,7 +783,7 @@ void OptionsMenu(byte Option) {
                     if (KeyVal() == Up)       if (AverageValue < 3)       AverageValue+= 1;
                     if (KeyVal() == Right)    PlayHelp(Option); 
                     if (KeyVal() == Left)     Esc= true;
-                    if (KeyVal() == Select)   WriteConfig();
+                    if (KeyVal() == Select)   {WriteConfig(); Esc= true;}
                  }
                  break;  
        case   4: Esc= false;
@@ -766,7 +797,7 @@ void OptionsMenu(byte Option) {
                    if (KeyVal() == Up)       if (SampleSpeed < 3)       SampleSpeed+= 1;
                    if (KeyVal() == Right)    PlayHelp(Option); 
                    if (KeyVal() == Left)     Esc= true;
-                   if (KeyVal() == Select)   WriteConfig();
+                   if (KeyVal() == Select)   {WriteConfig(); Esc= true;}
                  }
                  break;
        case   5: Esc= false;
@@ -777,7 +808,7 @@ void OptionsMenu(byte Option) {
                       if (KeyVal() == Down)     if (Curve > 0) Curve--;
                       if (KeyVal() == Right)    PlayHelp(Option); 
                       if (KeyVal() == Left)     Esc= true;
-                      if (KeyVal() == Select)   WriteConfig();
+                      if (KeyVal() == Select)   {WriteConfig(); Esc= true;}
                  }
                  break;                  
        case   6: Esc= false;
@@ -788,7 +819,7 @@ void OptionsMenu(byte Option) {
                     if (KeyVal() == Down)     if (ThresholdWindow > 10)  ThresholdWindow-= 10;
                     if (KeyVal() == Right)    PlayHelp(Option); 
                     if (KeyVal() == Left)     Esc= true;
-                    if (KeyVal() == Select)   WriteConfig();
+                    if (KeyVal() == Select)   {WriteConfig(); Esc= true;}
                  }
                  break; 
        case   7: Esc= false;
@@ -799,7 +830,7 @@ void OptionsMenu(byte Option) {
                      if (KeyVal() == Up)       if (AutoAdjustWindow < 300)  AutoAdjustWindow+= 10;
                      if (KeyVal() == Right)    PlayHelp(Option); 
                      if (KeyVal() == Left)     Esc= true;
-                     if (KeyVal() == Select)   WriteConfig();
+                     if (KeyVal() == Select)   {WriteConfig(); Esc= true;}
                  }
                  break;   
        case   8: Esc= false;
@@ -810,7 +841,7 @@ void OptionsMenu(byte Option) {
                      if (KeyVal() == Down)     if (MinValue > 10) MinValue-= 5;
                      if (KeyVal() == Right)    PlayHelp(Option); 
                      if (KeyVal() == Left)     Esc= true;
-                     if (KeyVal() == Select)   WriteConfig();
+                     if (KeyVal() == Select)   {WriteConfig(); Esc= true;}
                  }
                  break;
       case    9: Esc= false;
@@ -821,7 +852,7 @@ void OptionsMenu(byte Option) {
                     if (KeyVal() == Down)     if (MaxValue > (MinValue+20)) MaxValue-= 5;
                     if (KeyVal() == Right)    PlayHelp(Option); 
                     if (KeyVal() == Left)     Esc= true;
-                    if (KeyVal() == Select)   WriteConfig();
+                    if (KeyVal() == Select)   {WriteConfig(); Esc= true;}
                  }
                  break;
       case   10: Esc= false;
@@ -832,7 +863,7 @@ void OptionsMenu(byte Option) {
                      if (KeyVal() == Down)     if (PitchStep > 0) PitchStep--;
                      if (KeyVal() == Right)    PlayHelp(Option); 
                      if (KeyVal() == Left)     Esc= true;
-                     if (KeyVal() == Select)   WriteConfig();
+                     if (KeyVal() == Select)   {WriteConfig(); Esc= true;}
                  }
                  break; 
        case  11: Esc= false;
@@ -843,7 +874,7 @@ void OptionsMenu(byte Option) {
                     if (KeyVal() == Down)     if (PitchRev > 0) PitchRev--;
                     if (KeyVal() == Right)    PlayHelp(Option); 
                     if (KeyVal() == Left)     Esc= true;
-                    if (KeyVal() == Select)   WriteConfig();
+                    if (KeyVal() == Select)   {WriteConfig(); Esc= true;}
                  }
                  break;
        case  12: Esc= false;
@@ -854,7 +885,7 @@ void OptionsMenu(byte Option) {
                    if (KeyVal() == Up)       if (GetReadyTime < 20)      GetReadyTime+= 1;
                    if (KeyVal() == Right)    PlayHelp(Option); 
                    if (KeyVal() == Left)     Esc= true;
-                   if (KeyVal() == Select)   WriteConfig();
+                   if (KeyVal() == Select)   {WriteConfig(); Esc= true;}
                 }
                 break; 
        case 13: Esc= false;
@@ -865,7 +896,7 @@ void OptionsMenu(byte Option) {
                     if (KeyVal() == Down)     if (AlwaysSound > 0) AlwaysSound--;
                     if (KeyVal() == Right)    PlayHelp(Option); 
                     if (KeyVal() == Left)     Esc= true;
-                    if (KeyVal() == Select)   WriteConfig();
+                    if (KeyVal() == Select)   {WriteConfig(); Esc= true;}
                 }
                 break;                                                                                                                                                     
        case 14: Esc= false;
@@ -876,7 +907,7 @@ void OptionsMenu(byte Option) {
                     if (KeyVal() == Down)     if (MP3Volume >  5) MP3Volume-= 1;
                     if (KeyVal() == Right)    PlayHelp(Option); 
                     if (KeyVal() == Left)     Esc= true;
-                    if (KeyVal() == Select)   WriteConfig();
+                    if (KeyVal() == Select)   {WriteConfig(); Esc= true;}
                 }
                 break;
       case 15: { Esc= false;
@@ -925,6 +956,9 @@ void setup() {
   ClearOLED();
   ShowOLED("Batt: " +(String)ReadVcc()+"mV",0,6,3); //make init screen must be better!!!
   ShowOLED("Build: "+(String)__DATE__,0,7,3);
+  #ifdef SENSOR-TEST
+      SensorTest();
+  #endif 
   if (EEPROM.read(0)==1) ReadConfig(false); //Check if eeprom is empty (new)
   else WriteConfig();
   LowestReading= MaxValue;
