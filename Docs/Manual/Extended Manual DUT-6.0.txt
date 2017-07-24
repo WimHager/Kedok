@@ -1,0 +1,68 @@
+Beschrijving van de Kedok unit.
+
+Bovenkant:
+Aan de bovenkant van Kedok is aan de rechterkant een membraam toetsenbord om Kedok te bedienen.
+Dit is een vierkant vlak met 5 toetsen in de vorm van een joystick keypad.
+Het heeft een omhoog, omlaag, links, rechts en menu knop.
+Links op de bovenkant is een rechthoekig gat met een display wat alle instellingen weergeeft en wat de schutter aan het doen is.
+Je kunt ook alle instelling bedienen met dit display.
+
+Voorkant:
+Aan de voorkant is de aan en uit knop.
+
+Linkerkant:
+Aan de linkerkant zitten alle belangrijke aansluitingen.
+Van achter naar voren.
+Onderin is de aansluiting voor de koptelefoon, daarboven is een draaiknop om het volume van de toon te regelen.
+Daarnaast is de aansluiting voor de kabel naar de kijker.
+Stop of haal deze stekker er nooit uit als het apparaat aan staat.
+Daarnaast is een stofkap voor een usb aansluiting waar nieuwe systeem software in Kedok gezet kan worden.
+Deze hoeft alleen verwijderd te worden als er nieuwe syteem software wordt geplaatst.
+Aan de voorkant zit een micro USB poort om Kedok op te laden.
+De linker en achterkant zijn leeg.
+
+Het membraam toetsenbord:
+Met de knop in het midden komt u in het instellingen menu.
+Het menu is volledig in spraak uitgevoerd, met de op/neer toetsen kun je door het menu lopen.
+Als je verklaring van de functie's wil, druk dan op de rechter knop en u krijgt uitleg over de de geslecteerde optie.
+Als u weer op de menu knop drukt, kunt u de waarde van de optie aanpassen met met de op/neer toetsen.
+Om de waarde op te slaan, druk dan op menu en de waarde wordt opgeslagen.
+Met de links knop verlaat u de optie zonder op te slaan.
+Om het hoofdmenu te verlaten drukt u op de linker knop.
+
+Met het indrukken van de rechterknop kunt u Kedok kalibreren .
+Kedok vraagt om het geweer gereed te maken zodat u tijd hebt om de kaart te vinden.
+Daarna vraagt Kedok om zo goed mogelijk te gaan richten, het zoeken naar de hoogste toon.
+De beste manier om dit te doen is door over de kaart te bewegen alsof u over een oppervlakte wrijft.
+Als Kedok genoeg gegevens verzameld heeft, slaat het deze gegeven op en is de kalibratie voltooid.
+
+Met het indrukken van de linkerknop, laat Kedok de sensorwaarde en debug informatie op het display zien.
+Hiermee heeft een trainer overzicht wat een schutter op dat moment aan het doen is.
+Deze optie geeft wel een zeer kleine vertraging in de toon door het telkens verversen van het scherm.
+Standaard geeft het display een overzicht van alle instellingen.
+
+Met de omhoogknop maakt u de sensor van Kedok gevoeliger, mocht u denken dat u niet de hoogste toon meer hoort, druk dan op deze knop.
+
+Met de omlaagknop maakt u de sensor van Kedok minder gevoelig, als Kedok te gevoelig is ingesteld vraagt Kedok deze toets in te drukken.
+
+Het is erg belangrijk om de bijgeleverde lamp te gebruiken, dit is een 45 watt halogeen lamp met een licht bundel van 8 graden.
+Kedok geeft volledige spraak begeleiding, zodat een schutter hem zelfstandig kan bedienen zonder zicht.
+Het regelen van het geluidsvolume is opgesplits in twee gedeeltes, voor het volume van de toon zit er aan de linkerkant een draaiknop,
+Volume van de spraak kan in het menu worden ingesteld.
+
+Met een volledig opgeladen batterij kunt u ongeveer 8 uur schieten, het is aan te raden om na elke schietsessie Kedok weer op te laden.
+Het opladen van de batterij stopt automatisch als deze weer vol is.
+
+De kijker:
+Het nulstellen van de kijker kan gedaan worden met de draaiknoppen op de kijker.
+door dit in te stellen verplaatst u de plek waar de kogel de kaart raakt.
+Met de bovenste draaiknop op de kijker kunt u het punt van inslag omhoog of omlaag bewegen.
+Met de draaiknop op de zijkant verplaatst u dat van links naar rechts.
+Met ongeveer 11 klikken verplaatst u het 1 punt op de kaart.
+
+Het is raadzaam om te beginnen met de standaard instellingen en later aanpassingen in het menu te gaan doen.
+De standaard instellingen zijn voor een Pistool kaart en een toon van honderd tot zeventien honderd vijftig Hertz, in dit gebied is het gehoor vrij liniar.
+Met de optie fabrieksinstellingen in het menu kunt u Kedok in deze terug zetten. 
+
+Kedok is een opensource project en is continu in ontwikkeling.
+Mocht u opmerkingen, suggesties of hulp willen geven, aarzel dan niet contact met ons op te nemen.

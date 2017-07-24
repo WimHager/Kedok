@@ -1,0 +1,61 @@
+Description of the Kedok unit
+Top:
+At the top of Kedok you will find, at the right side, a membrane touch panel which controls Kedok.
+It is square with 5 buttons, shaped like a joystick keypad.
+It has an up, down, left, right and menu button.
+At the left on the top is a square window with a display to show all settings and what a shooter is doing in the menu.
+You can also make all settings by reading this display.
+
+Front:
+At the front you will find the power on/off switch.
+
+Left:
+On the left side you will find the most important connections.
+Reading from the back to the front:
+At the lower part is the headphone connector; above it is a knob to adjust the aiming pitch volume.
+Next you will find the sensor connector where the cable to the scope goes.
+Never connect/disconnect this cable if Kedok is running.
+Next to this connector is a USB port to upload new firmware into the unit; it has a dust cover which only needs to be removed if new firmware is being uploaded.
+At the front side is a micro USB connector to charge the Kedok unit.  You can use any 5 Volt mini USB charger.
+The right and back of the unit are empty.
+
+The membrane touch panel:
+The centre menu button will put you into the settings menu.
+The menu is voice guided and with the up/down button, you can go through all the menu options.
+If you want help with an option, press the right button and you will get help with the selected option.
+If you press the menu button again, you can adjust the chosen setting with the up/down buttons.
+If you want to save the settings, press menu again; if you want to leave without saving the settings, press left.
+Pressing left in the main menu exits the menu.
+
+If you press the right button, Kedok goes into calibration mode.
+First the unit asks you to get ready; at that moment, find the target card.
+Next it will ask you to aim the best you can; Kedok scans the target for the highest pitch it can find.
+Best practice is to aim as if you are rubbing over a surface.
+When Kedok has collected enough data, it will save it and the set is ready to use.
+
+If you press the left button, Kedok will show real time sensor readings and debug information on the display.
+This is to help a trainer to see what the shooter is doing.
+Display updates using this option will give a small lag in the pitch.
+This display also gives an overview of all the settings that were made in the settings menu.
+
+Pressing the Up button will make the sensor more sensitive;  if a shooter doesn't think the unit reaches his accustomed highest pitch, he can press this button.
+
+Pressing the Down button will make the sensor less sensitive; Kedok warns the shooter if it needs to be pressed by voice.
+
+It is important to use the supplied lamp only;  this is a 45 Watt halogen lamp with a beam width of 8 degrees.
+Kedok is fully voice guided, so there is no need for the shooter to read the display.
+Sound volume is split into two parts:  for pitch volume, use the turning knob on the right side of the unit; voice volume can be set in the menu.
+
+With a fully charged battery you can use the unit for about 8 hours.
+Best practice is always to recharge after a shooting session.
+Battery charging will stop when the battery is fully charged.
+
+Scope zeroing can be done by the turrets on the scope.
+By adjusting it, you can move the point of impact of the pellet on the target.
+The top adjuster (elevation) moves the point of impact up or down.
+The side adjuster (windage) moves the point of impact left or right.
+About 11 clicks will move it one point on the target.
+
+Kedok is an open-source project and will be continuously in development.
+If you have any suggestions, want to help, or want to join the project, please don't hesitate to contact us.
+

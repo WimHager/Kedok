@@ -1,0 +1,64 @@
+Using Kedok
+
+Before you begin to shoot, Kedok must be calibrated.  This is done by
+pressing the right button which starts automatic calibration.
+
+First you will be told to make the rifle ready, after than you are asked to focus on
+the target card as best you can so that the highest pitch is can be located. At that moment Kedok search for the highest value that can be found on the card, and it will be stored, as soon as enough data has been collected, Kedok is calibrated.
+
+These actions should be repeated whenever there are changes, such as a new setup.  
+During a shooting session, adjustments can be made by pressing the up or down buttons.
+If you are not sure that you have heard the highest tone, press the up button to
+increase the sensitivity of the sensor.
+If it is too sensitive, Kedok will ask that the sensor value be lowered by pressing
+the down button.
+By playing with these, you can get the most out of Kedok.
+
+Also note that the lamp is 35 centimeters from the card and 20 centimeters from the
+center. 
+
+Caution: Never plug the headset plug into the sensor 3.5 milimeter jack receptacle, It will damage your headset.
+Never plug or unplug the sensor cable while Kedok is switched on.
+Use the supplied lamp only.
+
+Always follow the shooting safety rules.
+
+
+
+
+
+Using Kedok
+
+Before you begin to shoot, Kedok must (should?) be calibrated.  This is done by
+pressing the right button which starts automatic calibration.
+
+(Check this section - not sure of the translation)
+First you will be told to make the gun ready, after which you are asked to focus on
+the target card as best you can so that the highest pitch is located.  At the moment
+that Kedok measures the highest value that can be found on the card, it is stored,
+and as soon as enough data has been received, Kedok is calibrated.
+
+These actions should be repeated whenever there are changes, such as a new setup.  
+During a shooting session, adjustments can be made by pressing the up or down buttons.
+If you are not sure that you have heard the highest tone, press the up button to
+increase the sensitivity of the sensor.
+If it is too sensitive, Kedok will ask that the sensor value be lowered by pressing
+the down button.
+By playing with these, you can get the most out of Kedok.
+Also note that the lamp is 35 centimeters from the card and 20 centimeters from the
+center.  
+Use the supplied lamp only.
+
+
+Het gebruik van Kedok.
+Voor u begint te schieten dient Kedok gekalibreerd te zijn. Dit doet u door de rechter knop in te drukken.
+Hiermee start u automatisch kalibreren.
+Eerst krijg u te horen om het geweer gereed te maken, daarna wordt gevraagd om zo goed mogelijk op de kaart te richten het zoeken op hoogste toon.
+Opdat moment meet Kedok de hoogste waarde die op de kaart te vinden is en slaat deze op, zodra er genoeg gegevens binnengekomen zijn is kedok gekalibreerd.
+Deze handelingen dienen herhaald te worden als er veranderingen zijn geweest, zoals een nieuwe opstelling.
+Tijdens een schietsessie kunt u dit ook iets aanpassen door de omhoog of omlaag knop in te drukken.
+Als u denkt dat u niet meer de allerhoogste toon hoort kunt u de omhoog toets indrukken, hierdoor wordt de sensor gevoeliger.
+Mocht u de sensor te gevoelig hebben ingesteld vraagt Kedok de sensor waarde te verlagen door de omlaag toets in te drukken.
+Door hier mee te spelen kunt u het maximale uit Kedok halen.
+
+Let u ook op dat de lamp 35 centimeter vanaf de kaart staat en 20 centimeter vanuit het hart. Gebruik alleen de bijgeleverde lamp.

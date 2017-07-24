@@ -205,7 +205,6 @@ To Do:
 
 
 ////////////////////////////////////////////
-#include <FilterExp.h>
 #ifdef SPEECH
   #include <SoftwareSerial.h>
 #else

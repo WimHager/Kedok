@@ -3,7 +3,7 @@ __asm volatile ("nop");
 #endif
 
 //====================================Compiler options=============================================================
-#define SENSOR-TEST   //Output sensor readings to serialport only
+//#define SENSOR-TEST   //Enable test mode for test
 
 const   char      Version[5]="6.00";
 const   char      Owner[16]= "DEMO";
@@ -39,12 +39,12 @@ To Do:
  add compile date maybe in eeprom as serial number Serial.println( "Compiled: " __DATE__ ", " __TIME__ ", " __VERSION__);
  if sensor read is < 50 try to switch off. Probably headset connected to the unit.
  Fonts naming
- Test with diode and capacitor
  Language selection in menu
  Pitch reverse needed?
  Better English voice
- Had a bug with filter, not sure. was in maximal, gave lower minimal settings
+ Had a bug with filter, not sure. was in maximal, gave lower minimal settings Benjamin mentioned something like occilating in filter
  Pre calculate average value and don't calculate every time
+ Reduce fonts to save memory
   
  Start to add a i2c ADS1015 12-Bit ADC - 4 Channel 
  Reset all if version updated
@@ -251,6 +251,7 @@ To Do:
 #define HelpRestoreFactorySettingsMP3      118
 #define HelpSetPitchStepMP3                168
 #define HelpKedokUsageMP3                  172 
+#define HelpKedokExtHelpMP3                173
 
 #define Key1Pin                              2
 #define Key2Pin                              3
@@ -340,8 +341,10 @@ void Reset() {
   int   NumReadings= 100;
   
   void SensorTest() {
+    ClearOLED();   
     ShowOLED("Test mode!!", 0,3,1);
-    delay(5000);
+    PlayTone(440,0);
+    delay(3000);
     Serial.begin(9600);
     while (!KeyVal()) {
        for(int X= 0; X<NumReadings; X++) {
@@ -354,8 +357,10 @@ void Reset() {
        ShowOLED("Std dev: "+(String)stats.stdev(Readings,NumReadings), 0,5,3);
        ShowOLED("Std err: "+(String)stats.stderror(Readings,NumReadings), 0,6,3);
        ShowOLED("Co Vari: "+(String)stats.CV(Readings,NumReadings), 0,7,3);
-       delay(5000);  //make key delay
-    }       
+       DelaySecIntr(5, true);
+    }
+    ClearOLED();
+    ShowOLED("Sensor to USB", 0,3,1);       
     while (true) {
       Serial.println((String)ReadValue(0));
     }
@@ -594,12 +599,12 @@ void InitKeyPad() {
   pinMode(Key5Pin,INPUT_PULLUP);
 }
  
-byte DelaySecIntr(word Time, boolean Intr) {
+byte DelaySecIntr(long Time, boolean Intr) {
   byte KeyPressed;
   while (KeyVal()) delay(100);  Intr= Intr; //Wait till key is released
   if (Intr) {
      Time= Time*800;
-     for (word X=0; X<Time; X++) {
+     for (long X=0; X<Time; X++) {
         KeyPressed= KeyVal();
         if (KeyPressed) return KeyPressed;
         delay(1);
@@ -620,7 +625,7 @@ void ShowOLED(String Text, byte X, byte Y, byte Font) {
    if (Font==1) oled.setFont(X11fixed7x14); 
    if (Font==2) oled.setFont(TimesNewRoman16_bold);
    if (Font==3) oled.setFont(System5x7);
-   if (Font==4) oled.setFont(Wendy3x5);
+   //if (Font==4) oled.setFont(Wendy3x5);
    if (Font==5) oled.setFont(lcdnums14x24);
    oled.setCol(X); oled.setRow(Y); //set cursor?
    oled.clearToEOL();
@@ -629,8 +634,10 @@ void ShowOLED(String Text, byte X, byte Y, byte Font) {
 
 void UpdateDisplay() {
   if (DisplaySensorReadings) {
+    byte Score;
+    if (Reading <= MaxValue) Score= map(Reading,MinValue,MaxValue,10,0); else Score= 0; //Avoid oveflow 
     ShowOLED((String)Reading,43,3,5);
-    ShowOLED("L:"+(String)LowestReading+"   S:"+(String)map(Reading,MinValue,MaxValue,10,0)+"   C:"+(String)LoopCounter,0,7,3);
+    ShowOLED("L:"+(String)LowestReading+"   S:"+(String)Score+"   C:"+(String)LoopCounter,0,7,3);
     LoopCounter= 0;
   }else{
     ClearOLED();
@@ -745,8 +752,13 @@ void OptionsMenu(byte Option) {
     byte Esc= false;
     if (Option != 0) PlaySound(UseArrowKeysMP3,6,1);  //do not play if help is selected, bit dirty
     switch(Option) {
-        case  0: ShowOLED("Usage playing..", 0,4,1);
-                 PlayHelp(Option); 
+        case  0: Esc= false;
+                 while (!Esc) {
+                    ShowOLED("Usage playing..", 0,4,1);
+                    PlayHelp(Option);
+                    if (KeyVal() == Right) {ShowOLED("Reading maual..", 0,4,1); PlaySound(HelpKedokExtHelpMP3,290,0); break;}  
+                    if (KeyVal() == Left)  Esc= true;                   
+                 }   
                  break;  
         case  1: Esc= false;
                  while (!Esc) {
@@ -946,8 +958,8 @@ void Menu() {
   UpdateDisplay();
 }
 
-
 void setup() {
+  Beep(1,440); //Let user know we started
   //Pinmode for audio pin????  
   //pinMode(AudioPin, OUTPUT);
   pinMode(SensorPin, INPUT);
@@ -956,9 +968,7 @@ void setup() {
   ClearOLED();
   ShowOLED("Batt: " +(String)ReadVcc()+"mV",0,6,3); //make init screen must be better!!!
   ShowOLED("Build: "+(String)__DATE__,0,7,3);
-  #ifdef SENSOR-TEST
-      SensorTest();
-  #endif 
+  //WriteConfig(); //enable to overwrite settings with defaults
   if (EEPROM.read(0)==1) ReadConfig(false); //Check if eeprom is empty (new)
   else WriteConfig();
   LowestReading= MaxValue;
@@ -969,6 +979,9 @@ void setup() {
   delay(500);
   SetVolume(MP3Volume);
   PlaySound(WelcomeMP3,4,0);
+  #ifdef SENSOR-TEST
+      SensorTest();
+  #endif
   for (byte X=0; X<255; X++) ReadValue(AverageValue); //clear EMA filter needed???
   UpdateDisplay();
 }
