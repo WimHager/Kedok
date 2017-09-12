@@ -322,7 +322,7 @@ struct SettingsObj {
   byte AverageValue;
   byte SampleSpeed;
   byte PitchStep;
-  byte AdvancedUser;
+  byte AdvancedUser;       //Reduce calibration time, Voice disable for set lower
 };  
 
 word    DispUpdTime=          1000; //1 sec Screen update 
@@ -753,7 +753,7 @@ byte MainMenuSelection() {
           case 16: ShowOLED("[Factory settings]", 0,4,1); PlaySound(RestoreFactorySettingsMP3,6,0); break; 
            
      } 
-     if (KeyVal() == Up)       if (OptionNr < 15) OptionNr+= 1;
+     if (KeyVal() == Up)       if (OptionNr < 16) OptionNr+= 1;
      if (KeyVal() == Down)     if (OptionNr >  0) OptionNr-= 1;
      if (KeyVal() == Select)   Esc= true; 
      if (KeyVal() == Right)    PlayHelp(OptionNr);  
@@ -938,7 +938,7 @@ void OptionsMenu(byte Option) {
                 break;
       case  15: Esc= false;
                 while (!Esc) {
-                   ShowOLED("Pitch Reverse: "+(String)YesNoArr[AdvancedUser], 0,4,1);
+                   ShowOLED("Advanced Usr: "+(String)YesNoArr[AdvancedUser], 0,4,1);
                    if (AdvancedUser) PlaySound(AdvancedUserEnabledMP3,3,0); else PlaySound(AdvancedUserDisabledMP3,3,0); 
                    if (KeyVal() == Up)       if (AdvancedUser < 1) AdvancedUser++;
                    if (KeyVal() == Down)     if (AdvancedUser > 0) AdvancedUser--;
