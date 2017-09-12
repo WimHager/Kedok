@@ -3,7 +3,7 @@ __asm volatile ("nop");
 #endif
 
 //====================================Compiler options=============================================================
-//#define SENSOR-TEST   //Enable test mode for test
+//#define SENSOR_TEST   //Enable test mode for test
 
 const   char      Version[5]="6.00";
 const   char      Owner[16]= "DEMO";
@@ -42,9 +42,11 @@ To Do:
  Language selection in menu
  Pitch reverse needed?
  Better English voice
- Had a bug with filter, not sure. was in maximal, gave lower minimal settings Benjamin mentioned something like occilating in filter
+ Had a bug with filter, not sure. was in maximal, gave lower minimal settings, Benjamin mentioned something like occilating in filter
  Pre calculate average value and don't calculate every time
  Reduce fonts to save memory
+ Advanced mode step size of down/up smaller, no voice for up/down (nanne jonker)
+ Threshold tests, Doing tests at the range what the settings really do
   
  Start to add a i2c ADS1015 12-Bit ADC - 4 Channel 
  Reset all if version updated
@@ -233,6 +235,9 @@ To Do:
 #define PitchStepEnabledMP3                 69
 #define PitchStepDisabledMP3                70  
 #define KedokUsageMP3                       72
+#define SetAdvancedUserMP3                  74
+#define AdvancedUserEnabledMP3              75
+#define AdvancedUserDisabledMP3             76
 
 #define HelpSetMinimalSensorValueMP3       123  
 #define HelpSetMaximalSensorValueMP3       122  
@@ -252,6 +257,7 @@ To Do:
 #define HelpSetPitchStepMP3                168
 #define HelpKedokUsageMP3                  172 
 #define HelpKedokExtHelpMP3                173
+#define HelpSetAdvancedUserMP3             174
 
 #define Key1Pin                              2
 #define Key2Pin                              3
@@ -297,6 +303,7 @@ byte    MP3Volume=                 25;
 byte    AverageValue=               1; //Read 0 values to average, Default Minimal
 byte    SampleSpeed=                0; //Loop delay 0,5,10,20
 byte    PitchStep=                  0; //Disables or enables Pitch step feature
+byte    AdvancedUser=               0; //Enable/Disable advance user settings. 
 byte    DisplaySensorReadings=      0; 
 word    CalibrationTime=         1500; //Calibration timeout if there are no better readings readby the sensor (was 2000)
 
@@ -315,13 +322,14 @@ struct SettingsObj {
   byte AverageValue;
   byte SampleSpeed;
   byte PitchStep;
+  byte AdvancedUser;
 };  
 
 word    DispUpdTime=          1000; //1 sec Screen update 
-char    *YesNoArr[]=          {"N", "Y"};
-char    *AvgModes[]=          {"None", "Low", "Medium", "Maximal"};
-char    *SampleModes[]=       {"Fast", "Medium", "Slow", "Slowest"};
-char    *EnableDisableArr[]=  {"Disable","Enable"};
+const char    *YesNoArr[]=          {"N", "Y"};
+const char    *AvgModes[]=          {"None", "Low", "Medium", "Maximal"};
+const char    *SampleModes[]=       {"Fast", "Medium", "Slow", "Slowest"};
+const char    *EnableDisableArr[]=  {"Disable","Enable"};
 long    PrevDispTime;
 
 word    Reading;
@@ -334,7 +342,7 @@ void Reset() {
   asm volatile ("  jmp 0");
 } 
 
-#ifdef SENSOR-TEST
+#ifdef SENSOR_TEST
   #include "QuickStats.h"  
   QuickStats stats;
   float Readings[100];
@@ -384,6 +392,7 @@ void WriteConfig() {
     AverageValue,
     SampleSpeed,
     PitchStep,
+    AdvancedUser,
   };  
   EEPROM.put(1, CurSettings);
   ShowOLED("Saving config..", 0,4,1);
@@ -412,6 +421,7 @@ void ReadConfig(byte OnlyRead) {
   AverageValue= CurSettings.AverageValue;
   SampleSpeed= CurSettings.SampleSpeed;
   PitchStep= CurSettings.PitchStep;
+  AdvancedUser= CurSettings.AdvancedUser;
   if (!OnlyRead) {
     ShowOLED("Reading config..", 0,4,1);
     PlaySound(ReadConfigMP3,4,0);
@@ -700,7 +710,9 @@ void PlayHelp(byte Option) {
     case 12: PlaySound(HelpSetTimeToGetReadyMP3,10,0); break; 
     case 13: PlaySound(HelpSetAlwaysSoundMP3,8,0); break;                                
     case 14: PlaySound(HelpSetVolumeMP3,8,0); break;
-    case 15: PlaySound(HelpRestoreFactorySettingsMP3,10,0); break;
+    case 15: PlaySound(HelpSetAdvancedUserMP3,8,0); break;
+    case 16: PlaySound(HelpRestoreFactorySettingsMP3,10,0); break;
+
   }  
 }
 
@@ -736,8 +748,10 @@ byte MainMenuSelection() {
           case 11: ShowOLED("[Pitch reverse]", 0,4,1); PlaySound(SetPitchReverseMP3,8,0); break;
           case 12: ShowOLED("[Get ready time]", 0,4,1); PlaySound(SetTimeToGetReadyMP3,8,0); break;          
           case 13: ShowOLED("[Always sound]", 0,4,1); PlaySound(SetAlwaysSoundMP3,8,0); break;    
-          case 14: ShowOLED("[Voice volume]", 0,4,1); PlaySound(SetVolumeMP3,8,0); break;          
-          case 15: ShowOLED("[Factory settings]", 0,4,1); PlaySound(RestoreFactorySettingsMP3,6,0); break;  
+          case 14: ShowOLED("[Voice volume]", 0,4,1); PlaySound(SetVolumeMP3,8,0); break;
+          case 15: ShowOLED("[Advanced user]", 0,4,1); PlaySound(SetAdvancedUserMP3,8,0); break;                        
+          case 16: ShowOLED("[Factory settings]", 0,4,1); PlaySound(RestoreFactorySettingsMP3,6,0); break; 
+           
      } 
      if (KeyVal() == Up)       if (OptionNr < 15) OptionNr+= 1;
      if (KeyVal() == Down)     if (OptionNr >  0) OptionNr-= 1;
@@ -922,7 +936,18 @@ void OptionsMenu(byte Option) {
                     if (KeyVal() == Select)   {WriteConfig(); Esc= true;}
                 }
                 break;
-      case 15: { Esc= false;
+      case  15: Esc= false;
+                while (!Esc) {
+                   ShowOLED("Pitch Reverse: "+(String)YesNoArr[AdvancedUser], 0,4,1);
+                   if (AdvancedUser) PlaySound(AdvancedUserEnabledMP3,3,0); else PlaySound(AdvancedUserDisabledMP3,3,0); 
+                   if (KeyVal() == Up)       if (AdvancedUser < 1) AdvancedUser++;
+                   if (KeyVal() == Down)     if (AdvancedUser > 0) AdvancedUser--;
+                   if (KeyVal() == Right)    PlayHelp(Option); 
+                   if (KeyVal() == Left)     Esc= true;
+                   if (KeyVal() == Select)   {WriteConfig(); Esc= true;}
+                }
+                break;                
+      case 16: { Esc= false;
                  boolean SetToDefaults= false; 
                  while (!Esc) {
                     ShowOLED("Factory reset: "+(String)YesNoArr[SetToDefaults], 0,4,1);
@@ -979,7 +1004,7 @@ void setup() {
   delay(500);
   SetVolume(MP3Volume);
   PlaySound(WelcomeMP3,4,0);
-  #ifdef SENSOR-TEST
+  #ifdef SENSOR_TEST
       SensorTest();
   #endif
   for (byte X=0; X<255; X++) ReadValue(AverageValue); //clear EMA filter needed???
