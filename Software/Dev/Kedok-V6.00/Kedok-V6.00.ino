@@ -45,17 +45,16 @@ To Do:
  Had a bug with filter, not sure. was in maximal, gave lower minimal settings, Benjamin mentioned something like occilating in filter
  Pre calculate average value and don't calculate every time
  Reduce fonts to save memory
- Advanced mode step size of down/up smaller, no voice for up/down (nanne jonker) load advanced user etiings
  Threshold tests, Doing tests at the range what the settings really do
-  
  Start to add a i2c ADS1015 12-Bit ADC - 4 Channel 
  Reset all if version updated
  Better Auto adjust
- Add option to save users presets
  Change delay's in speech, some are utterly slow alo improve saying values (remove "value is" in some cases) 
  Beginners mode, wide window
  Set Hightone default 300 lower if Pitchstep is enabled
  Add change owner name with buttons.
+ More text about experianced user mode
+ Writeconfig with or without voice
  
  V2.00 18-4-2015
  Compiled with 1.0.5
@@ -102,6 +101,7 @@ To Do:
  06-06-2017 Huge code cleaning, added Sensor value showing
  15-06-2017 Remove all logging modes.
  15-06-2017 New EMA filter
+ 24-09-2017 Presets for novice or experienced shooter
 */
 
 //Note Audio pin 10. 
@@ -521,8 +521,10 @@ String WordToStr(word Inp, byte Size) {
 void MoveSensorWindow(int Val) {
   MinValue= MinValue + Val;
   MaxValue= MaxValue + Val;
-     if (Val < 0) PlaySound(SensorReducedMP3,3,0);
-     else  PlaySound(SensorIncreasedMP3,3,0);
+  if (NoviceUser) {
+       if (Val < 0) PlaySound(SensorReducedMP3,3,0);
+       else  PlaySound(SensorIncreasedMP3,3,0);
+  }   
   ClearOLED();
   WriteConfig();
   DisplaySensorReadings= false;
