@@ -45,7 +45,7 @@ To Do:
  Had a bug with filter, not sure. was in maximal, gave lower minimal settings, Benjamin mentioned something like occilating in filter
  Pre calculate average value and don't calculate every time
  Reduce fonts to save memory
- Advanced mode step size of down/up smaller, no voice for up/down (nanne jonker)
+ Advanced mode step size of down/up smaller, no voice for up/down (nanne jonker) load advanced user etiings
  Threshold tests, Doing tests at the range what the settings really do
   
  Start to add a i2c ADS1015 12-Bit ADC - 4 Channel 
@@ -235,9 +235,12 @@ To Do:
 #define PitchStepEnabledMP3                 69
 #define PitchStepDisabledMP3                70  
 #define KedokUsageMP3                       72
-#define SetAdvancedUserMP3                  74
-#define AdvancedUserEnabledMP3              75
-#define AdvancedUserDisabledMP3             76
+#define LoadShooterTypeMP3                  73 
+#define LoadNoviceUserMP3                   74
+#define LoadAdvancedUserMP3                 75
+#define SavedNoviceUserMP3                  76
+#define SavedAdvancedUserMP3                77
+#define SecondsMP3                          78
 
 #define HelpSetMinimalSensorValueMP3       123  
 #define HelpSetMaximalSensorValueMP3       122  
@@ -257,7 +260,7 @@ To Do:
 #define HelpSetPitchStepMP3                168
 #define HelpKedokUsageMP3                  172 
 #define HelpKedokExtHelpMP3                173
-#define HelpSetAdvancedUserMP3             174
+#define HelpLoadShooterTypeMP3             174
 
 #define Key1Pin                              2
 #define Key2Pin                              3
@@ -269,43 +272,44 @@ static int8_t     Send_buf[8]= {0};
 
 SSD1306AsciiAvrI2c oled;
 
-byte    AudioPin=                  10;
-byte    SensorPin=                 A3;
+byte    AudioPin=                    10;
+byte    SensorPin=                   A3;
 
-const  byte None=                   0;
-const  byte Select=                 1;
-const  byte Down=                   3;
-const  byte Up=                     2;
-const  byte Right=                  4;
-const  byte Left=                   5;
-const  byte       Value=            1;
-const  byte       Bar=              2;
-const  boolean    Disable=       true;
-const  boolean    Enable=       false;
+const  byte None=                     0;
+const  byte Select=                   1;
+const  byte Down=                     3;
+const  byte Up=                       2;
+const  byte Right=                    4;
+const  byte Left=                     5;
+const  byte       Value=              1;
+const  byte       Bar=                2;
+const  boolean    Disable=         true;
+const  boolean    Enable=         false;
 
-word    MinValue=                 100;
-word    MaxValue=                 800;
+word    MinValue=                   100;
+word    MaxValue=                   800;
 
-word    LowTone=                  100; 
-word    HighTone=                1750;
+word    LowTone=                    100; 
+word    HighTone=                  1750;
 
-byte    Curve=                      0;
-byte    PitchRev=               false;
-byte    AlwaysSound=            false; 
+byte    Curve=                        0;
+byte    PitchRev=                 false;
+byte    AlwaysSound=              false; 
+byte    NoviceUser=                true;
   
-word    AutoAdjustWindow=         200; // Normal pistol card size
-byte    ThresholdWindow=          150; 
-byte    GetReadyTime=              15; // 15 Seconds
-word    PitchStepValue=           300; // Around the 8 on target card
-word    MoveSensorWindowStepSize=   5; // In/Dec MoveWindow steps if Up or Down is pressed  //Make constant?? !!!
-long    LoopCounter=                0;
-byte    MP3Volume=                 25;
-byte    AverageValue=               1; //Read 0 values to average, Default Minimal
-byte    SampleSpeed=                0; //Loop delay 0,5,10,20
-byte    PitchStep=                  0; //Disables or enables Pitch step feature
-byte    AdvancedUser=               0; //Enable/Disable advance user settings. 
-byte    DisplaySensorReadings=      0; 
-word    CalibrationTime=         1500; //Calibration timeout if there are no better readings readby the sensor (was 2000)
+word    AutoAdjustWindow=           200; // Normal pistol card size
+byte    ThresholdWindow=            150; 
+byte    GetReadyTime=                15; // 15 Seconds Also update SetNoviceMode !!!
+word    PitchStepValue=             300; // Around the 8 on target card
+word    MoveSensorWindowStepSize=    10; // In/Dec MoveWindow steps if Up or Down is pressed Also update SetNoviceMode !!!
+
+long    LoopCounter=                  0;
+byte    MP3Volume=                   25;
+byte    AverageValue=                 1; //Read 0 values to average, Default Minimal
+byte    SampleSpeed=                  0; //Loop delay 0,5,10,20
+byte    PitchStep=                    0; //Disables or enables Pitch step feature
+byte    DisplaySensorReadings=        0; 
+word    CalibrationTime=           2000; //Calibration timeout if there are no better readings readby the sensor Also update SetNoviceMode !!
 
 struct SettingsObj {
   word MinValue;
@@ -322,7 +326,7 @@ struct SettingsObj {
   byte AverageValue;
   byte SampleSpeed;
   byte PitchStep;
-  byte AdvancedUser;       //Reduce calibration time, Voice disable for set lower
+  byte NoviceUser;
 };  
 
 word    DispUpdTime=          1000; //1 sec Screen update 
@@ -392,7 +396,7 @@ void WriteConfig() {
     AverageValue,
     SampleSpeed,
     PitchStep,
-    AdvancedUser,
+    NoviceUser,
   };  
   EEPROM.put(1, CurSettings);
   ShowOLED("Saving config..", 0,4,1);
@@ -421,7 +425,7 @@ void ReadConfig(byte OnlyRead) {
   AverageValue= CurSettings.AverageValue;
   SampleSpeed= CurSettings.SampleSpeed;
   PitchStep= CurSettings.PitchStep;
-  AdvancedUser= CurSettings.AdvancedUser;
+  NoviceUser= CurSettings.NoviceUser;
   if (!OnlyRead) {
     ShowOLED("Reading config..", 0,4,1);
     PlaySound(ReadConfigMP3,4,0);
@@ -500,7 +504,7 @@ void LowReadWarning() {
   Beep(3,300);
   ClearOLED(); 
   ShowOLED("Lower settings", 0,4,1);
-  PlaySound(LowerMinimalSettingMP3,3,0);
+  if (NoviceUser) PlaySound(LowerMinimalSettingMP3,3,0);
   ClearOLED();
   UpdateDisplay();
 }  
@@ -523,7 +527,6 @@ void MoveSensorWindow(int Val) {
   WriteConfig();
   DisplaySensorReadings= false;
   UpdateDisplay();
-  //delay(500);
 }  
 
 void AutoAdjust() {
@@ -660,6 +663,21 @@ void UpdateDisplay() {
   }  
 }
 
+void SetNoviceMode(byte Novice) {
+   if (Novice) {
+     GetReadyTime= 15;
+     MoveSensorWindowStepSize= 10;
+     CalibrationTime= 2000;
+     PlaySound(SavedNoviceUserMP3,4,0);
+   }else{
+     GetReadyTime= 5;
+     MoveSensorWindowStepSize= 5;
+     CalibrationTime= 800;
+     PlaySound(SavedAdvancedUserMP3,4,0);
+   }
+   NoviceUser= Novice;
+}
+
 void SendMP3Command(int8_t Command, int16_t Data) {
   delay(20);
   Send_buf[0] = 0x7e; //starting byte
@@ -710,9 +728,8 @@ void PlayHelp(byte Option) {
     case 12: PlaySound(HelpSetTimeToGetReadyMP3,10,0); break; 
     case 13: PlaySound(HelpSetAlwaysSoundMP3,8,0); break;                                
     case 14: PlaySound(HelpSetVolumeMP3,8,0); break;
-    case 15: PlaySound(HelpSetAdvancedUserMP3,8,0); break;
+    case 15: PlaySound(HelpLoadShooterTypeMP3,8,0); break;
     case 16: PlaySound(HelpRestoreFactorySettingsMP3,10,0); break;
-
   }  
 }
 
@@ -749,7 +766,7 @@ byte MainMenuSelection() {
           case 12: ShowOLED("[Get ready time]", 0,4,1); PlaySound(SetTimeToGetReadyMP3,8,0); break;          
           case 13: ShowOLED("[Always sound]", 0,4,1); PlaySound(SetAlwaysSoundMP3,8,0); break;    
           case 14: ShowOLED("[Voice volume]", 0,4,1); PlaySound(SetVolumeMP3,8,0); break;
-          case 15: ShowOLED("[Advanced user]", 0,4,1); PlaySound(SetAdvancedUserMP3,8,0); break;                        
+          case 15: ShowOLED("[Shooter type]", 0,4,1); PlaySound(LoadShooterTypeMP3,8,0); break;                        
           case 16: ShowOLED("[Factory settings]", 0,4,1); PlaySound(RestoreFactorySettingsMP3,6,0); break; 
            
      } 
@@ -906,7 +923,7 @@ void OptionsMenu(byte Option) {
        case  12: Esc= false;
                  while (!Esc) {
                    ShowOLED("Timer: "+(String)GetReadyTime+" sec.", 0,4,1);
-                   PlayNumber(GetReadyTime, 1);
+                   PlayNumber(GetReadyTime, 1); PlaySound(SecondsMP3,2,0);
                    if (KeyVal() == Down)     if (GetReadyTime > 2)       GetReadyTime-= 1;
                    if (KeyVal() == Up)       if (GetReadyTime < 20)      GetReadyTime+= 1;
                    if (KeyVal() == Right)    PlayHelp(Option); 
@@ -936,24 +953,26 @@ void OptionsMenu(byte Option) {
                     if (KeyVal() == Select)   {WriteConfig(); Esc= true;}
                 }
                 break;
-      case  15: Esc= false;
-                while (!Esc) {
-                   ShowOLED("Advanced Usr: "+(String)YesNoArr[AdvancedUser], 0,4,1);
-                   if (AdvancedUser) PlaySound(AdvancedUserEnabledMP3,3,0); else PlaySound(AdvancedUserDisabledMP3,3,0); 
-                   if (KeyVal() == Up)       if (AdvancedUser < 1) AdvancedUser++;
-                   if (KeyVal() == Down)     if (AdvancedUser > 0) AdvancedUser--;
-                   if (KeyVal() == Right)    PlayHelp(Option); 
-                   if (KeyVal() == Left)     Esc= true;
-                   if (KeyVal() == Select)   {WriteConfig(); Esc= true;}
-                }
+      case  15: { Esc= false;
+                  boolean AdvancedUser= false; 
+                  while (!Esc) {
+                    ShowOLED("Advanced Usr: "+(String)YesNoArr[AdvancedUser], 0,4,1);
+                    if (AdvancedUser) PlaySound(LoadAdvancedUserMP3,6,0); else PlaySound(LoadNoviceUserMP3,6,0); 
+                    if (KeyVal() == Up)       if (!AdvancedUser) AdvancedUser= true;
+                    if (KeyVal() == Down)     if (AdvancedUser)  AdvancedUser= false;
+                    if (KeyVal() == Right)    PlayHelp(Option); 
+                    if (KeyVal() == Left)     Esc= true;
+                    if (KeyVal() == Select)   {SetNoviceMode(!AdvancedUser); WriteConfig(); Esc= true;}
+                  }
+                }  
                 break;                
       case 16: { Esc= false;
                  boolean SetToDefaults= false; 
                  while (!Esc) {
                     ShowOLED("Factory reset: "+(String)YesNoArr[SetToDefaults], 0,4,1);
                     if (SetToDefaults) PlaySound(RestoreFactoryDefaultsEnabledMP3,4,0); else PlaySound(RestoreFactoryDefaultsDisabledMP3,4,0); 
-                    if (KeyVal() == Up)        if (SetToDefaults < 1) SetToDefaults= true;
-                    if (KeyVal() == Down)      if (SetToDefaults > 0) SetToDefaults= false;
+                    if (KeyVal() == Up)        if (!SetToDefaults) SetToDefaults= true; 
+                    if (KeyVal() == Down)      if (SetToDefaults)  SetToDefaults= false;
                     if (KeyVal() == Right)     PlayHelp(Option); 
                     if (KeyVal() == Left)      Esc= true;
                     if (KeyVal() == Select)    if (SetToDefaults) {
