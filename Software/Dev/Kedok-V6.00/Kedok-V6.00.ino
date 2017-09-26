@@ -55,6 +55,8 @@ To Do:
  Add change owner name with buttons.
  More text about experianced user mode
  Writeconfig with or without voice
+ Think about new aiming system, running window.
+ Optimize keyboard read code.
  
  V2.00 18-4-2015
  Compiled with 1.0.5
@@ -555,7 +557,7 @@ void AutoAdjust() {
   ShowOLED("Start to aim now!", 0,4,1);
   PlaySound(StartToAimNowMP3,5,0);
   TimeOutCounter= 0;
-  while (ReadKey() == None) {
+  while (KeyVal() == None) {
     Reading= ReadValue(0);
     AudioTone= fscale(100,900,HighTone,LowTone,Reading,Curve);
     PlayTone(AudioTone,0);
@@ -574,7 +576,7 @@ void AutoAdjust() {
     WriteConfig();
     delay(300);
   }else{
-    ShowOLED("Warning level to high!", 0,4,1);
+    ShowOLED("Level to high!", 0,4,1);
     PlaySound(CalibrationLevelToHighMP3,10,0);
     PlayNumber(LowestReading,1);
   }  
@@ -590,21 +592,6 @@ void AutoAdjust() {
    UpdateDisplay();
 } 
 
-byte ReadKey() {
-  word KeyPressCounter= 0;
-  byte Key= KeyVal();
-  if (Key) {
-    while (Key == KeyVal()) {
-      KeyPressCounter++;
-      if (KeyPressCounter > 15000) {
-        Beep(2,600);
-        Key= Key+10;
-        break;  
-      }
-    }
-  }
-  return Key;
-}  
 
 void InitKeyPad() {
   pinMode(Key1Pin,INPUT_PULLUP);
@@ -614,7 +601,7 @@ void InitKeyPad() {
   pinMode(Key5Pin,INPUT_PULLUP);
 }
  
-byte DelaySecIntr(long Time, boolean Intr) {
+byte DelaySecIntr(long Time, boolean Intr) {  //optimize this
   byte KeyPressed;
   while (KeyVal()) delay(100);  Intr= Intr; //Wait till key is released
   if (Intr) {
@@ -735,7 +722,7 @@ void PlayHelp(byte Option) {
   }  
 }
 
-byte KeyVal() {
+byte KeyVal() {  //optimize!!
   if (!digitalRead(Key1Pin)) {PlayTone(1000,20); return Select;}
   if (!digitalRead(Key2Pin)) {PlayTone(1000,20); return Down;}
   if (!digitalRead(Key3Pin)) {PlayTone(1000,20); return Up;}
@@ -787,9 +774,9 @@ void OptionsMenu(byte Option) {
     switch(Option) {
         case  0: Esc= false;
                  while (!Esc) {
-                    ShowOLED("Usage playing..", 0,4,1);
+                    ShowOLED("Help playing..", 0,4,1);
                     PlayHelp(Option);
-                    if (KeyVal() == Right) {ShowOLED("Reading maual..", 0,4,1); PlaySound(HelpKedokExtHelpMP3,290,0); break;}  
+                    if (KeyVal() == Right) {ShowOLED("Reading manual..", 0,4,1); PlaySound(HelpKedokExtHelpMP3,308,0); break;}  
                     if (KeyVal() == Left)  Esc= true;                   
                  }   
                  break;  
