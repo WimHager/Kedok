@@ -14,7 +14,7 @@ word    MP3Language=       0X0200; //0X0100 English 0X0200 Dutch
 //=================================================================================================================
 
 /*
-    Kedok (audio aiming device), Copyright 2017 Wim Hager
+    Kedok (audio aiming device), Copyright 2018 Wim Hager
     Kedok is distributed under the terms of the GNU GPL
     
     Kedok is free software: you can redistribute it and/or modify
@@ -34,7 +34,8 @@ word    MP3Language=       0X0200; //0X0100 English 0X0200 Dutch
               CAD and 3D printworks Jan Stinissen
 
 To Do:
- Remove pitch revers, no-one use it
+ Pitch divider default is window size 200. option to divide it is 200..100 20 was to extreme.  
+
  Bug, if kalibration is done on a realy bright light source weid value and sound give lowest pich is with Min sensor value
  Batt check funtction
  Add standing position trainer. Play sound, no sound for 5 sec than sound again in a repeat mode. (Nanne Jonker)
@@ -53,12 +54,10 @@ To Do:
  Better Auto adjust
  Change delay's in speech, some are utterly slow alo improve saying values (remove "value is" in some cases) 
  Beginners mode, wide window
- Set Hightone default 300 lower if Pitchstep is enabled
  Add change owner name with buttons.
  Writeconfig with or without voice?
  Think about new aiming system, running window.
  Optimize keyboard read code.
- Bug. PitchStep does not work if you higher the High pitch Mentioned by Benjamin 25/10/2017
  
  V2.00 18-4-2015
  Compiled with 1.0.5
@@ -106,8 +105,10 @@ To Do:
  15-06-2017 Remove all logging modes.
  15-06-2017 New EMA filter
  24-09-2017 Presets for novice or experienced shooter
- V6.00 24-12-2017
+ V6.10 24-12-2017
  25-12-2017 Added tone jump setting, you can move the threshold of the jump from 0 to the 9 ring
+ 31-12-2017 Removed Pitch revers, no-one use it.
+ 31-12-2017 Added Stance trainer
 */
 
 //Note Audio pin 10. 
@@ -189,7 +190,7 @@ To Do:
 #define SetMaximalSensorValueMP3            22  
 #define SetSensorThresholdValueMP3          25  
 #define SetSoundCurveValueMP3               26  
-#define SetPitchReverseMP3                  24  
+//#define SetPitchReverseMP3                  24  
 #define SetLowestPitchMP3                   21  
 #define SetHigestPitchMP3                   20  
 #define SetAutoAdjustWindowMP3              19
@@ -209,8 +210,8 @@ To Do:
 #define ExitOptionsMenuMP3                  33
 #define DataSettingsSavedMP3                34
 #define TheValueIsMP3                       35
-#define PitchReverseDisabledMP3             37
-#define PitchReverseEnabledMP3              36
+//#define PitchReverseDisabledMP3             37 //removed option since 6.10
+//#define PitchReverseEnabledMP3              36
 #define AlwaysSoundEnabledMP3               38
 #define AlwaysSoundDisabledMP3              39
 #define AllSettingsResetToDefaultsMP3       40
@@ -248,12 +249,16 @@ To Do:
 #define SavedAdvancedUserMP3                77
 #define SecondsMP3                          78
 #define SetPitchStepValueMP3                79
+#define StartPositionTrainerMP3             80
+#define LayRifleOnStandTakeAimMP3           81
+#define AimingTrainerStartedMP3             82
+#define PressMenuToStartMP3                 83
 
 #define HelpSetMinimalSensorValueMP3       123  
 #define HelpSetMaximalSensorValueMP3       122  
 #define HelpSetSensorThresholdValueMP3     125  
 #define HelpSetSoundCurveValueMP3          126  
-#define HelpSetPitchReverseMP3             124  
+//#define HelpSetPitchReverseMP3             124  //removed option since 6.10
 #define HelpSetLowestPitchMP3              121  
 #define HelpSetHigestPitchMP3              120  
 #define HelpSetAutoAdjustWindowMP3         119
@@ -319,7 +324,6 @@ long    LoopCounter=                  0;
 byte    MP3Volume=                   25;
 byte    AverageValue=                 0; //Read 0 values to average, Default Minimal
 byte    SampleSpeed=                  0; //Loop delay 0,5,10,20
-//byte    PitchStep=                    0; //Disables or enables Pitch step feature
 byte    DisplaySensorReadings=        0; 
 word    CalibrationTime=           2000; //Calibration timeout if there are no better readings readby the sensor Also update SetNoviceMode !!
 
@@ -495,7 +499,7 @@ word EmaFilter(word Inp, float Alpha) { //Alpha in range of 9..1
 
 word ReadValue(word AvgVal) { 
   if (!AverageValue) return analogRead(SensorPin); // For the sake of speed
-  return EmaFilter(analogRead(SensorPin),10-(AvgVal*3)); //Creates 1=7 Low,2=6 Medium, 3=1 Maximal //Change this, it can be pre calculated!!
+  return EmaFilter(analogRead(SensorPin),10-(AvgVal*3)); //Creates 1=7 Low,2=6 Medium, 3=1 Maximal //it maybe can be pre calculated!!
 }
 
 void PlayTone(word Tone, word Duration) {
@@ -543,6 +547,30 @@ void MoveSensorWindow(int Val) {
   UpdateDisplay();
 }  
 
+
+void StanceTrainer() {
+  word TimeOutCounter=   0; 
+  ClearOLED();
+  ShowOLED("Stance training..", 0,4,1);
+  //Aiming trainer started, take aim.
+  PlaySound(AimingTrainerStartedMP3, 9,0); //to stop here
+  while (!KeyVal()) {
+     Beep(1,440); 
+     delay(300);
+     while (TimeOutCounter < (6*90)) { //5 seconds
+       Reading= ReadValue(0);
+       AudioTone= fscale(100,900,HighTone,LowTone,Reading,0);
+       PlayTone(AudioTone,0);
+       TimeOutCounter++;
+       delay(10);
+    }
+    PlayTone(0,0); // Turn off the tone. 
+    //Lay rifle on the stand, reposition and start to take aim again, press any key to stop.    
+    PlaySound(LayRifleOnStandTakeAimMP3,14,0);
+    TimeOutCounter=   0;
+  }  
+}
+
 void AutoAdjust() {
   word Reading;
   word LowestReading= 1023;
@@ -555,7 +583,7 @@ void AutoAdjust() {
  
   while (TimeOutCounter < (GetReadyTime*90)) {
      Reading= ReadValue(0);
-     AudioTone= fscale(100,900,HighTone,LowTone,Reading,Curve);
+     AudioTone= fscale(100,900,HighTone,LowTone,Reading,0);
      PlayTone(AudioTone,0);
      TimeOutCounter++;
      delay(10);
@@ -569,10 +597,10 @@ void AutoAdjust() {
   TimeOutCounter= 0;
   while (KeyVal() == None) {
     Reading= ReadValue(0);
-    AudioTone= fscale(100,900,HighTone,LowTone,Reading,Curve);
+    AudioTone= fscale(100,900,HighTone,LowTone,Reading,0);
     PlayTone(AudioTone,0);
     if (Reading < LowestReading) {
-      if (Reading > 50) LowestReading= Reading; //Very bright light came in, avoids negative value overload
+      if (Reading > 50) LowestReading= Reading; //Very bright light came in, avoid negative value overload
       TimeOutCounter= 0;
     }  
     TimeOutCounter++;
@@ -723,7 +751,7 @@ void PlayHelp(byte Option) {
     case  8: PlaySound(HelpSetMinimalSensorValueMP3,13,0); break;
     case  9: PlaySound(HelpSetMaximalSensorValueMP3,13,0); break;
     case 10: PlaySound(HelpSetPitchStepValueMP3,20,0); break; 
-    case 11: PlaySound(HelpSetPitchReverseMP3,9,0); break;
+    case 11: /*PlaySound(HelpSetPitchReverseMP3,9,0)*/; break;
     case 12: PlaySound(HelpSetTimeToGetReadyMP3,10,0); break; 
     case 13: PlaySound(HelpSetAlwaysSoundMP3,8,0); break;                                
     case 14: PlaySound(HelpSetVolumeMP3,8,0); break;
@@ -761,7 +789,7 @@ byte MainMenuSelection() {
           case  8: ShowOLED("[Minimal sensor]", 0,4,1); PlaySound(SetMinimalSensorValueMP3,8,0); break; 
           case  9: ShowOLED("[Maximal sensor]", 0,4,1); PlaySound(SetMaximalSensorValueMP3,8,0); break;
           case 10: ShowOLED("[Pitch jump]", 0,4,1); PlaySound(SetPitchStepValueMP3,8,0); break;
-          case 11: ShowOLED("[Stance Trainer]", 0,4,1); PlaySound(SetPitchReverseMP3,8,0); break; //doto
+          case 11: ShowOLED("[Stance Trainer]", 0,4,1); PlaySound(StartPositionTrainerMP3,8,0); break; //doto
           case 12: ShowOLED("[Get ready time]", 0,4,1); PlaySound(SetTimeToGetReadyMP3,8,0); break;          
           case 13: ShowOLED("[Always sound]", 0,4,1); PlaySound(SetAlwaysSoundMP3,8,0); break;    
           case 14: ShowOLED("[Voice volume]", 0,4,1); PlaySound(SetVolumeMP3,8,0); break;
@@ -780,7 +808,7 @@ byte MainMenuSelection() {
 
 void OptionsMenu(byte Option) {
     byte Esc= false;
-    if (Option != 0) PlaySound(UseArrowKeysMP3,6,1);  //do not play if help is selected, bit dirty
+    if ((Option != 0) && (Option != 11) ) PlaySound(UseArrowKeysMP3,6,1);  //do not play if help or trainer is selected, bit dirty
     switch(Option) {
         case  0: Esc= false;
                  while (!Esc) {
@@ -910,13 +938,11 @@ void OptionsMenu(byte Option) {
                  break; 
        case  11: Esc= false;
                  while (!Esc) {
-                    ShowOLED("Stance trainer: "+(String)YesNoArr[PitchRev], 0,4,1); //doto
-                    if (PitchRev) PlaySound(PitchReverseEnabledMP3,3,0); else PlaySound(PitchReverseDisabledMP3,3,0); 
-                    if (KeyVal() == Up)       if (PitchRev < 1) PitchRev++;
-                    if (KeyVal() == Down)     if (PitchRev > 0) PitchRev--;
-                    if (KeyVal() == Right)    PlayHelp(Option); 
-                    if (KeyVal() == Left)     Esc= true;
-                    if (KeyVal() == Select)   {WriteConfig(); Esc= true;}
+                    ShowOLED("Menu to start: ",0,4,1);
+                    PlaySound(PressMenuToStartMP3,6,1);
+                    if (KeyVal() == Select)    {StanceTrainer(); Esc= true;} 
+                    if (KeyVal() == Right)     PlayHelp(Option); 
+                    if (KeyVal() == Left)      Esc= true;                   
                  }
                  break;
        case  12: Esc= false;
@@ -1042,6 +1068,7 @@ void loop() {
   if (Reading < MinValue) {
      LowReadWarning(); 
   }else if (Reading < MaxValue) {
+     //AudioTone= fscale(MinValue,MaxValue,HighTone,LowTone,Reading,Curve);
      AudioTone= fscale(MinValue,MaxValue,HighTone,LowTone,Reading,Curve);
      PitchStepThreshold= MaxValue-(((MaxValue-MinValue)/10)*PitchStepValue); //Try to get this out the loop for speed
      if (Reading < PitchStepThreshold) AudioTone= AudioTone+300;
