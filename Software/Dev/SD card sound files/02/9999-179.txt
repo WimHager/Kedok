@@ -1,0 +1,1 @@
+Met toonsprong krijgt de toon een duidelijk sprongetje naarmate je dichter bij de tien komt, hoe hoger je de waarde insteld, des te dichter dit sprongetje bij de tien komt. Met een waarde van nul, staat het uit.

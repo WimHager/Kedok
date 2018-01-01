@@ -274,6 +274,7 @@ To Do:
 #define HelpKedokExtHelpMP3                173
 #define HelpLoadShooterTypeMP3             174
 #define HelpSetPitchStepValueMP3           179
+#define HelpStanceTrainerMP3               180
 
 
 #define Key1Pin                              2
@@ -751,7 +752,7 @@ void PlayHelp(byte Option) {
     case  8: PlaySound(HelpSetMinimalSensorValueMP3,13,0); break;
     case  9: PlaySound(HelpSetMaximalSensorValueMP3,13,0); break;
     case 10: PlaySound(HelpSetPitchStepValueMP3,20,0); break; 
-    case 11: /*PlaySound(HelpSetPitchReverseMP3,9,0)*/; break;
+    case 11: PlaySound(HelpStanceTrainerMP3 ,20,0); break;
     case 12: PlaySound(HelpSetTimeToGetReadyMP3,10,0); break; 
     case 13: PlaySound(HelpSetAlwaysSoundMP3,8,0); break;                                
     case 14: PlaySound(HelpSetVolumeMP3,8,0); break;
@@ -1068,7 +1069,6 @@ void loop() {
   if (Reading < MinValue) {
      LowReadWarning(); 
   }else if (Reading < MaxValue) {
-     //AudioTone= fscale(MinValue,MaxValue,HighTone,LowTone,Reading,Curve);
      AudioTone= fscale(MinValue,MaxValue,HighTone,LowTone,Reading,Curve);
      PitchStepThreshold= MaxValue-(((MaxValue-MinValue)/10)*PitchStepValue); //Try to get this out the loop for speed
      if (Reading < PitchStepThreshold) AudioTone= AudioTone+300;
