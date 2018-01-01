@@ -35,15 +35,11 @@ word    MP3Language=       0X0200; //0X0100 English 0X0200 Dutch
 
 To Do:
  Pitch divider default is window size 200. option to divide it is 200..100 20 was to extreme.  
-
- Bug, if kalibration is done on a realy bright light source weid value and sound give lowest pich is with Min sensor value
  Batt check funtction
- Add standing position trainer. Play sound, no sound for 5 sec than sound again in a repeat mode. (Nanne Jonker)
  add compile date maybe in eeprom as serial number Serial.println( "Compiled: " __DATE__ ", " __TIME__ ", " __VERSION__);
  if sensor read is < 50 try to switch off. Probably headset connected to the unit.
  Fonts naming
  Language selection in menu
- Pitch reverse needed?
  Better English voice
  Had a bug with filter, not sure. was in maximal, gave lower minimal settings, Benjamin mentioned something like occilating in filter
  Pre calculate average value and don't calculate every time
@@ -108,7 +104,8 @@ To Do:
  V6.10 24-12-2017
  25-12-2017 Added tone jump setting, you can move the threshold of the jump from 0 to the 9 ring
  31-12-2017 Removed Pitch revers, no-one use it.
- 31-12-2017 Added Stance trainer
+ 31-12-2017 Added Stance trainer (mentioned by Nanne Jonker)
+ 31-1202017 Fixed bug with negative values after calibration
 */
 
 //Note Audio pin 10. 
@@ -751,8 +748,8 @@ void PlayHelp(byte Option) {
     case  7: PlaySound(HelpSetAutoAdjustWindowMP3,11,0); break;
     case  8: PlaySound(HelpSetMinimalSensorValueMP3,13,0); break;
     case  9: PlaySound(HelpSetMaximalSensorValueMP3,13,0); break;
-    case 10: PlaySound(HelpSetPitchStepValueMP3,20,0); break; 
-    case 11: PlaySound(HelpStanceTrainerMP3 ,20,0); break;
+    case 10: PlaySound(HelpSetPitchStepValueMP3,13,0); break; 
+    case 11: PlaySound(HelpStanceTrainerMP3 ,22,0); break;
     case 12: PlaySound(HelpSetTimeToGetReadyMP3,10,0); break; 
     case 13: PlaySound(HelpSetAlwaysSoundMP3,8,0); break;                                
     case 14: PlaySound(HelpSetVolumeMP3,8,0); break;
