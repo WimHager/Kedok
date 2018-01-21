@@ -34,6 +34,7 @@ word    MP3Language=       0X0200; //0X0100 English 0X0200 Dutch
               CAD and 3D printworks Jan Stinissen
 
 To Do:
+ Add a threshold value to Maxvalue to find the card easier in a dark environment/background (Martien Hendriks)
  Pitch divider default is window size 200. option to divide it is 200..100 20 was to extreme.  
  Batt check funtction
  add compile date maybe in eeprom as serial number Serial.println( "Compiled: " __DATE__ ", " __TIME__ ", " __VERSION__);
