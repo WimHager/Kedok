@@ -5,11 +5,11 @@ __asm volatile ("nop");
 //====================================Compiler options=============================================================
 //#define SENSOR_TEST   //Enable test mode for test
 
-const   char      Version[5]="6.10";
+const   char      Version[5]="6.11";
 const   char      Owner[16]= "DEMO";
 const   char      SerialNr[23]=  "";
 
-word    MP3Language=       0X0200; //0X0100 English 0X0200 Dutch
+word    MP3Language=       0X0200; //0X0200 English 0X0200 Dutch
 
 //=================================================================================================================
 
@@ -104,7 +104,7 @@ To Do:
  24-09-2017 Presets for novice or experienced shooter
  V6.10 24-12-2017
  25-12-2017 Added tone jump setting, you can move the threshold of the jump from 0 to the 9 ring
- 31-12-2017 Removed Pitch revers, no-one use it.
+ 31-12-2017 Removed Pitch revers, no-one used it.
  31-12-2017 Added Stance trainer (mentioned by Nanne Jonker)
  31-1202017 Fixed bug with negative values after calibration
 */
@@ -288,7 +288,6 @@ SSD1306AsciiAvrI2c oled;
 
 byte    AudioPin=                    10;
 byte    SensorPin=                   A3;
-
 const  byte None=                     0;
 const  byte Select=                   1;
 const  byte Down=                     3;
@@ -313,8 +312,9 @@ byte    AlwaysSound=              false;
 byte    NoviceUser=                true;
   
 word    AutoAdjustWindow=           200; // Normal pistol card size
-byte    ThresholdWindow=            150; 
-byte    GetReadyTime=                15; // 15 Seconds Also update SetNoviceMode !!!
+byte    ThresholdWindow=            150; // Wide near target card before it start to give sound
+byte    WarningThreshold             20; // Threshold before a lower sersor value starts
+byte    GetReadyTime=                15; // 15 Seconds Also update SetNoviceMode !!! to do: make it two vars
 word    PitchStepValue=               0; // Default off. Range 9 div sensor range
 word    PitchStepThreshold=           0; // Threshold for the tone jump in the output.
 word    MoveSensorWindowStepSize=    10; // In/Dec MoveWindow steps if Up or Down is pressed Also update SetNoviceMode !!!
@@ -675,7 +675,9 @@ void UpdateDisplay() {
     byte Score;
     if (Reading <= MaxValue) Score= map(Reading,MinValue,MaxValue,10,0); else Score= 0; //Avoid oveflow 
     ShowOLED((String)Reading,43,3,5);
-    //ShowOLED((String)PitchStepThreshold,0,2,2);
+        //AudioTone= fscale(MinValue,MaxValue,HighTone,LowTone,Reading,Curve);
+        //ShowOLED("Frq: "+(String)AudioTone,0,2,2);
+        //ShowOLED((String)PitchStepThreshold,0,2,2);
     ShowOLED("L:"+(String)LowestReading+"   S:"+(String)Score+"   C:"+(String)LoopCounter,0,7,3);
     LoopCounter= 0;
   }else{
@@ -1027,6 +1029,7 @@ void Menu() {
 }
 
 void setup() {
+  pinMode(AudioPin, OUTPUT);
   Beep(1,440); //Let user know we started
   //Pinmode for audio pin????  
   //pinMode(AudioPin, OUTPUT);
@@ -1064,8 +1067,12 @@ void loop() {
   } 
    
  //--------Kernel part-------- 
-  if (Reading < MinValue) {
-     LowReadWarning(); 
+  // new test to create a threshold on min value to avoid annoying warnings
+  if (Reading < (MinValue-20)) { //LowWarningThreshold= 20 Menu option???
+     LowReadWarning();
+  if (Reading < MinValue) Reading= MinValue;    
+  // new test
+  
   }else if (Reading < MaxValue) {
      AudioTone= fscale(MinValue,MaxValue,HighTone,LowTone,Reading,Curve);
      PitchStepThreshold= MaxValue-(((MaxValue-MinValue)/10)*PitchStepValue); //Try to get this out the loop for speed
