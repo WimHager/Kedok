@@ -34,6 +34,8 @@ word    MP3Language=       0X0200; //0X0200 English 0X0200 Dutch
               CAD and 3D printworks Jan Stinissen
 
 To Do:
+ Gevoeligheid Lage Sensorwaarde
+ Threshold value on lower sensor value, make it a menu option.
  Add a threshold value to Maxvalue to find the card easier in a dark environment/background (Martien Hendriks)
  Pitch divider default is window size 200. option to divide it is 200..100 20 was to extreme.  
  Batt check funtction
@@ -251,6 +253,7 @@ To Do:
 #define LayRifleOnStandTakeAimMP3           81
 #define AimingTrainerStartedMP3             82
 #define PressMenuToStartMP3                 83
+#define SetLowSensorSensitivityMP3          84
 
 #define HelpSetMinimalSensorValueMP3       123  
 #define HelpSetMaximalSensorValueMP3       122  
@@ -273,6 +276,7 @@ To Do:
 #define HelpLoadShooterTypeMP3             174
 #define HelpSetPitchStepValueMP3           179
 #define HelpStanceTrainerMP3               180
+#define HelpSetLowSensorSensitivityMP3     184
 
 
 #define Key1Pin                              2
@@ -313,7 +317,7 @@ byte    NoviceUser=                true;
   
 word    AutoAdjustWindow=           200; // Normal pistol card size
 byte    ThresholdWindow=            150; // Wide near target card before it start to give sound
-byte    WarningThreshold             20; // Threshold before a lower sersor value starts
+byte    LowWarningSensitivity=       20; // Threshold before a lower sersor value warning starts
 byte    GetReadyTime=                15; // 15 Seconds Also update SetNoviceMode !!! to do: make it two vars
 word    PitchStepValue=               0; // Default off. Range 9 div sensor range
 word    PitchStepThreshold=           0; // Threshold for the tone jump in the output.
@@ -331,7 +335,7 @@ struct SettingsObj {
   word MaxValue;
   byte ThresholdWindow;
   byte Curve;
-  byte PitchRev;
+  byte LowWarningSensitivity;
   byte AlwaysSound;  
   word AutoAdjustWindow;
   byte GetReadyTime;        //Timeout for get ready with auto adjust
@@ -348,6 +352,7 @@ word    DispUpdTime=          1000; //1 sec Screen update
 const char    *YesNoArr[]=          {"N", "Y"};
 const char    *AvgModes[]=          {"None", "Low", "Medium", "Maximal"};
 const char    *SampleModes[]=       {"Fast", "Medium", "Slow", "Slowest"};
+const char    *WarningThresholds[]= {"High", "Avg", "Low"};
 const char    *EnableDisableArr[]=  {"Disable","Enable"};
 long    PrevDispTime;
 
@@ -401,7 +406,7 @@ void WriteConfig() {
     MaxValue,
     ThresholdWindow,
     Curve,
-    PitchRev,
+    LowWarningSensitivity,
     AlwaysSound,
     AutoAdjustWindow,
     GetReadyTime,
@@ -431,7 +436,7 @@ void ReadConfig(byte OnlyRead) {
   ThresholdWindow= CurSettings.ThresholdWindow;
   GetReadyTime= CurSettings.GetReadyTime;
   Curve= CurSettings.Curve;
-  PitchRev= CurSettings.PitchRev;
+  LowWarningSensitivity= CurSettings.LowWarningSensitivity;
   AlwaysSound= CurSettings.AlwaysSound;
   AutoAdjustWindow= CurSettings.AutoAdjustWindow;
   LowTone= CurSettings.LowTone;
@@ -748,16 +753,17 @@ void PlayHelp(byte Option) {
     case  4: PlaySound(HelpSetSampleSpeedMP3,8,0); break;
     case  5: PlaySound(HelpSetSoundCurveValueMP3,11,0); break;
     case  6: PlaySound(HelpSetSensorThresholdValueMP3,10,0); break;
-    case  7: PlaySound(HelpSetAutoAdjustWindowMP3,11,0); break;
-    case  8: PlaySound(HelpSetMinimalSensorValueMP3,13,0); break;
-    case  9: PlaySound(HelpSetMaximalSensorValueMP3,13,0); break;
-    case 10: PlaySound(HelpSetPitchStepValueMP3,13,0); break; 
-    case 11: PlaySound(HelpStanceTrainerMP3 ,22,0); break;
-    case 12: PlaySound(HelpSetTimeToGetReadyMP3,10,0); break; 
-    case 13: PlaySound(HelpSetAlwaysSoundMP3,8,0); break;                                
-    case 14: PlaySound(HelpSetVolumeMP3,8,0); break;
-    case 15: PlaySound(HelpLoadShooterTypeMP3,8,0); break;
-    case 16: PlaySound(HelpRestoreFactorySettingsMP3,10,0); break;
+    case  7: PlaySound(HelpSetSensorThresholdValueMP3,10,0); break;
+    case  8: PlaySound(HelpSetAutoAdjustWindowMP3,11,0); break;
+    case  9: PlaySound(HelpSetMinimalSensorValueMP3,13,0); break;
+    case 10: PlaySound(HelpSetMaximalSensorValueMP3,13,0); break;
+    case 11: PlaySound(HelpSetPitchStepValueMP3,13,0); break; 
+    case 12: PlaySound(HelpStanceTrainerMP3 ,22,0); break;
+    case 13: PlaySound(HelpSetTimeToGetReadyMP3,10,0); break; 
+    case 14: PlaySound(HelpSetAlwaysSoundMP3,8,0); break;                                
+    case 15: PlaySound(HelpSetVolumeMP3,8,0); break;
+    case 16: PlaySound(HelpLoadShooterTypeMP3,8,0); break;
+    case 17: PlaySound(HelpRestoreFactorySettingsMP3,10,0); break;
   }  
 }
 
@@ -785,20 +791,21 @@ byte MainMenuSelection() {
           case  3: ShowOLED("[Average]", 0,4,1); PlaySound(SetSensorAverageFilterMP3,8,0); break;
           case  4: ShowOLED("[Sample speed]", 0,4,1); PlaySound(SetSampleSpeedMP3,8,0); break;
           case  5: ShowOLED("[Sound curve]", 0,4,1); PlaySound(SetSoundCurveValueMP3,8,0); break;
-          case  6: ShowOLED("[Sensor threshold]", 0,4,1); PlaySound(SetSensorThresholdValueMP3,8,0); break; 
-          case  7: ShowOLED("[Auto adj. window]", 0,4,1); PlaySound(SetAutoAdjustWindowMP3,8,0); break;                                                  
-          case  8: ShowOLED("[Minimal sensor]", 0,4,1); PlaySound(SetMinimalSensorValueMP3,8,0); break; 
-          case  9: ShowOLED("[Maximal sensor]", 0,4,1); PlaySound(SetMaximalSensorValueMP3,8,0); break;
-          case 10: ShowOLED("[Pitch jump]", 0,4,1); PlaySound(SetPitchStepValueMP3,8,0); break;
-          case 11: ShowOLED("[Stance Trainer]", 0,4,1); PlaySound(StartPositionTrainerMP3,8,0); break; //doto
-          case 12: ShowOLED("[Get ready time]", 0,4,1); PlaySound(SetTimeToGetReadyMP3,8,0); break;          
-          case 13: ShowOLED("[Always sound]", 0,4,1); PlaySound(SetAlwaysSoundMP3,8,0); break;    
-          case 14: ShowOLED("[Voice volume]", 0,4,1); PlaySound(SetVolumeMP3,8,0); break;
-          case 15: ShowOLED("[Shooter type]", 0,4,1); PlaySound(LoadShooterTypeMP3,8,0); break;                        
-          case 16: ShowOLED("[Factory settings]", 0,4,1); PlaySound(RestoreFactorySettingsMP3,6,0); break; 
+          case  6: ShowOLED("[Sensor threshold]", 0,4,1); PlaySound(SetSensorThresholdValueMP3,8,0); break;
+          case  7: ShowOLED("[Warn sensivity]", 0,4,1); PlaySound(SetLowSensorSensitivityMP3,8,0); break;
+          case  8: ShowOLED("[Auto adj. window]", 0,4,1); PlaySound(SetAutoAdjustWindowMP3,8,0); break;                                                  
+          case  9: ShowOLED("[Minimal sensor]", 0,4,1); PlaySound(SetMinimalSensorValueMP3,8,0); break; 
+          case 10: ShowOLED("[Maximal sensor]", 0,4,1); PlaySound(SetMaximalSensorValueMP3,8,0); break;
+          case 11: ShowOLED("[Pitch jump]", 0,4,1); PlaySound(SetPitchStepValueMP3,8,0); break;
+          case 12: ShowOLED("[Stance Trainer]", 0,4,1); PlaySound(StartPositionTrainerMP3,8,0); break; //doto
+          case 13: ShowOLED("[Get ready time]", 0,4,1); PlaySound(SetTimeToGetReadyMP3,8,0); break;          
+          case 14: ShowOLED("[Always sound]", 0,4,1); PlaySound(SetAlwaysSoundMP3,8,0); break;    
+          case 15: ShowOLED("[Voice volume]", 0,4,1); PlaySound(SetVolumeMP3,8,0); break;
+          case 16: ShowOLED("[Shooter type]", 0,4,1); PlaySound(LoadShooterTypeMP3,8,0); break;                        
+          case 17: ShowOLED("[Factory settings]", 0,4,1); PlaySound(RestoreFactorySettingsMP3,6,0); break; 
            
      } 
-     if (KeyVal() == Up)       if (OptionNr < 16) OptionNr+= 1;
+     if (KeyVal() == Up)       if (OptionNr < 17) OptionNr+= 1;
      if (KeyVal() == Down)     if (OptionNr >  0) OptionNr-= 1;
      if (KeyVal() == Select)   Esc= true; 
      if (KeyVal() == Right)    PlayHelp(OptionNr);  
@@ -895,6 +902,19 @@ void OptionsMenu(byte Option) {
                  break; 
        case   7: Esc= false;
                  while (!Esc) {
+                    ShowOLED("Warning enivity: "+(String)WarningThresholds[LowWarningSensitivity], 0,4,1);
+                    if (LowWarningSensitivity == 0)    PlaySound(HighMP3,4,0); 
+                    if (LowWarningSensitivity == 1)    PlaySound(AverageMP3,4,0);
+                    if (LowWarningSensitivity == 2)    PlaySound(LowMP3,4,0); 
+                    if (KeyVal() == Down)     if (LowWarningSensitivity > 0) LowWarningSensitivity-= 1;
+                    if (KeyVal() == Up)       if (LowWarningSensitivity < 2) LowWarningSensitivity+= 1;
+                    if (KeyVal() == Right)    PlayHelp(Option); 
+                    if (KeyVal() == Left)     Esc= true;
+                    if (KeyVal() == Select)   {WriteConfig(); Esc= true;}
+                 }
+                 break;  
+      case   8: Esc= false;
+                 while (!Esc) {
                      ShowOLED("Auto window: "+(String)AutoAdjustWindow, 0,4,1);
                      PlayNumber(AutoAdjustWindow, 1);
                      if (KeyVal() == Down)     if (AutoAdjustWindow > 50)   AutoAdjustWindow-= 10;
@@ -904,7 +924,7 @@ void OptionsMenu(byte Option) {
                      if (KeyVal() == Select)   {WriteConfig(); Esc= true;}
                  }
                  break;   
-       case   8: Esc= false;
+       case   9: Esc= false;
                  while (!Esc) {
                      ShowOLED("Min. Sensor: "+(String)MinValue, 0,4,1);
                      PlayNumber(MinValue, 1);
@@ -915,7 +935,7 @@ void OptionsMenu(byte Option) {
                      if (KeyVal() == Select)   {WriteConfig(); Esc= true;}
                  }
                  break;
-      case    9: Esc= false;
+      case    10: Esc= false;
                  while (!Esc) {
                     ShowOLED("Max. Sensor: "+(String)MaxValue, 0,4,1);
                     PlayNumber(MaxValue, 1);
@@ -926,7 +946,7 @@ void OptionsMenu(byte Option) {
                     if (KeyVal() == Select)   {WriteConfig(); Esc= true;}
                  }
                  break;
-      case   10: Esc= false;
+      case   11: Esc= false;
                  while (!Esc) {
                      ShowOLED("Pitch jump: "+(String)PitchStepValue, 0,4,1);
                      PlayNumber(PitchStepValue, 1);
@@ -937,7 +957,7 @@ void OptionsMenu(byte Option) {
                      if (KeyVal() == Select)   {WriteConfig(); Esc= true;}
                  }
                  break; 
-       case  11: Esc= false;
+       case  12: Esc= false;
                  while (!Esc) {
                     ShowOLED("Menu to start: ",0,4,1);
                     PlaySound(PressMenuToStartMP3,6,1);
@@ -946,7 +966,7 @@ void OptionsMenu(byte Option) {
                     if (KeyVal() == Left)      Esc= true;                   
                  }
                  break;
-       case  12: Esc= false;
+       case  13: Esc= false;
                  while (!Esc) {
                    ShowOLED("Timer: "+(String)GetReadyTime+" sec.", 0,4,1);
                    PlayNumber(GetReadyTime, 1); PlaySound(SecondsMP3,2,0);
@@ -957,7 +977,7 @@ void OptionsMenu(byte Option) {
                    if (KeyVal() == Select)   {WriteConfig(); Esc= true;}
                 }
                 break; 
-       case 13: Esc= false;
+       case 14: Esc= false;
                 while (!Esc) {
                     ShowOLED("Always Sound: "+(String)YesNoArr[AlwaysSound], 0,4,1);
                     if (AlwaysSound) PlaySound(AlwaysSoundEnabledMP3,3,0); else PlaySound(AlwaysSoundDisabledMP3,3,0); 
@@ -968,7 +988,7 @@ void OptionsMenu(byte Option) {
                     if (KeyVal() == Select)   {WriteConfig(); Esc= true;}
                 }
                 break;                                                                                                                                                     
-       case 14: Esc= false;
+       case 15: Esc= false;
                 while (!Esc) {
                     ShowOLED("Volume: "+(String)MP3Volume, 0,4,1);
                     PlayNumber(MP3Volume, 1);
@@ -979,7 +999,7 @@ void OptionsMenu(byte Option) {
                     if (KeyVal() == Select)   {WriteConfig(); Esc= true;}
                 }
                 break;
-      case  15: { Esc= false;
+      case  16: { Esc= false;
                   boolean AdvancedUser= false; 
                   while (!Esc) {
                     ShowOLED("Advanced Usr: "+(String)YesNoArr[AdvancedUser], 0,4,1);
@@ -992,7 +1012,7 @@ void OptionsMenu(byte Option) {
                   }
                 }  
                 break;                
-      case 16: { Esc= false;
+      case 17: { Esc= false;
                  boolean SetToDefaults= false; 
                  while (!Esc) {
                     ShowOLED("Factory reset: "+(String)YesNoArr[SetToDefaults], 0,4,1);
@@ -1068,7 +1088,7 @@ void loop() {
    
  //--------Kernel part-------- 
   // new test to create a threshold on min value to avoid annoying warnings
-  if (Reading < (MinValue-20)) { //LowWarningThreshold= 20 Menu option???
+  if (Reading < (MinValue-20)) { //LowWarningThreshold
      LowReadWarning();
   if (Reading < MinValue) Reading= MinValue;    
   // new test
