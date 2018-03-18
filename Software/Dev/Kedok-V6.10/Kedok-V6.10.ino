@@ -34,7 +34,6 @@ word    MP3Language=       0X0200; //0X0200 English 0X0200 Dutch
               CAD and 3D printworks Jan Stinissen
 
 To Do:
- Gevoeligheid Lage Sensorwaarde
  Threshold value on lower sensor value, make it a menu option.
  Add a threshold value to Maxvalue to find the card easier in a dark environment/background (Martien Hendriks)
  Pitch divider default is window size 200. option to divide it is 200..100 20 was to extreme.  
@@ -108,7 +107,8 @@ To Do:
  25-12-2017 Added tone jump setting, you can move the threshold of the jump from 0 to the 9 ring
  31-12-2017 Removed Pitch revers, no-one used it.
  31-12-2017 Added Stance trainer (mentioned by Nanne Jonker)
- 31-1202017 Fixed bug with negative values after calibration
+ 31-12-2017 Fixed bug with negative values after calibration
+ 18-03-2018 Added option to set sensitivity level on Low sensor value
 */
 
 //Note Audio pin 10. 
@@ -317,7 +317,7 @@ byte    NoviceUser=                true;
   
 word    AutoAdjustWindow=           200; // Normal pistol card size
 byte    ThresholdWindow=            150; // Wide near target card before it start to give sound
-byte    LowWarningSensitivity=       20; // Threshold before a lower sersor value warning starts
+byte    LowWarningSensitivity=        0; // Threshold before a lower sersor value warning starts
 byte    GetReadyTime=                15; // 15 Seconds Also update SetNoviceMode !!! to do: make it two vars
 word    PitchStepValue=               0; // Default off. Range 9 div sensor range
 word    PitchStepThreshold=           0; // Threshold for the tone jump in the output.
@@ -352,7 +352,7 @@ word    DispUpdTime=          1000; //1 sec Screen update
 const char    *YesNoArr[]=          {"N", "Y"};
 const char    *AvgModes[]=          {"None", "Low", "Medium", "Maximal"};
 const char    *SampleModes[]=       {"Fast", "Medium", "Slow", "Slowest"};
-const char    *WarningThresholds[]= {"High", "Avg", "Low"};
+const char    *WarningThresholds[]= {"High", "Avg.", "Low"};
 const char    *EnableDisableArr[]=  {"Disable","Enable"};
 long    PrevDispTime;
 
@@ -753,7 +753,7 @@ void PlayHelp(byte Option) {
     case  4: PlaySound(HelpSetSampleSpeedMP3,8,0); break;
     case  5: PlaySound(HelpSetSoundCurveValueMP3,11,0); break;
     case  6: PlaySound(HelpSetSensorThresholdValueMP3,10,0); break;
-    case  7: PlaySound(HelpSetSensorThresholdValueMP3,10,0); break;
+    case  7: PlaySound(HelpSetLowSensorSensitivityMP3,15,0); break;
     case  8: PlaySound(HelpSetAutoAdjustWindowMP3,11,0); break;
     case  9: PlaySound(HelpSetMinimalSensorValueMP3,13,0); break;
     case 10: PlaySound(HelpSetMaximalSensorValueMP3,13,0); break;
@@ -902,7 +902,7 @@ void OptionsMenu(byte Option) {
                  break; 
        case   7: Esc= false;
                  while (!Esc) {
-                    ShowOLED("Warning enivity: "+(String)WarningThresholds[LowWarningSensitivity], 0,4,1);
+                    ShowOLED("Warn sens: "+(String)WarningThresholds[LowWarningSensitivity], 0,4,1);
                     if (LowWarningSensitivity == 0)    PlaySound(HighMP3,4,0); 
                     if (LowWarningSensitivity == 1)    PlaySound(AverageMP3,4,0);
                     if (LowWarningSensitivity == 2)    PlaySound(LowMP3,4,0); 
@@ -1087,12 +1087,10 @@ void loop() {
   } 
    
  //--------Kernel part-------- 
-  // new test to create a threshold on min value to avoid annoying warnings
-  if (Reading < (MinValue-20)) { //LowWarningThreshold
+  // Threshold on min value to avoid annoying warnings
+  if (Reading < (MinValue-(LowWarningSensitivity*10))) { //LowWarningThreshold
      LowReadWarning();
-  if (Reading < MinValue) Reading= MinValue;    
-  // new test
-  
+  if (Reading < MinValue) Reading= MinValue;  //Clamping to MinValue  
   }else if (Reading < MaxValue) {
      AudioTone= fscale(MinValue,MaxValue,HighTone,LowTone,Reading,Curve);
      PitchStepThreshold= MaxValue-(((MaxValue-MinValue)/10)*PitchStepValue); //Try to get this out the loop for speed
